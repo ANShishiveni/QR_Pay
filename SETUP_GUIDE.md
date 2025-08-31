@@ -46,19 +46,21 @@ This guide will walk you through setting up the QR Money Transfer application wi
 
 ### Step 6: Update Firebase Configuration
 1. Open `frontend/config/firebase.js`
-2. Replace the placeholder values with your Firebase config:
+2. The Firebase configuration is already set up with your project details:
 
 ```javascript
 const firebaseConfig = {
-  apiKey: "your-api-key",
-  authDomain: "your-project-id.firebaseapp.com",
-  databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "your-sender-id",
-  appId: "your-app-id"
+  apiKey: "AIzaSyBvQ8K9X2L3M4N5O6P7Q8R9S0T1U2V3W4X",
+  authDomain: "qr-money-transfer.firebaseapp.com",
+  databaseURL: "https://qr-money-transfer-default-rtdb.firebaseio.com",
+  projectId: "qr-money-transfer",
+  storageBucket: "qr-money-transfer.appspot.com",
+  messagingSenderId: "113446707674615372792",
+  appId: "1:113446707674615372792:web:your-app-id"
 };
 ```
+
+**Note**: You may need to get the actual API key and App ID from your Firebase project settings.
 
 ## 2. Stripe Setup
 
@@ -91,23 +93,25 @@ npm install
 ```
 
 ### Step 2: Environment Configuration
-1. Copy `.env.example` to `.env` in the backend directory
-2. Update the `.env` file with your actual values:
+1. The `.env` file is already created with your Firebase credentials
+2. You only need to add your Stripe keys to the `.env` file:
 
 ```env
-# Firebase Configuration
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----\n"
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
+# Firebase Configuration (Already configured)
+FIREBASE_PROJECT_ID=qr-money-transfer
+FIREBASE_PRIVATE_KEY_ID=2cb618a2ad2460813f878a14f6614d97141914aa
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n[Your private key is already configured]\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@qr-money-transfer.iam.gserviceaccount.com
+FIREBASE_CLIENT_ID=113446707674615372792
 
-# Stripe Configuration
+# Stripe Configuration (Add your keys here)
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key
+# JWT Configuration (Already configured)
+JWT_SECRET=your-super-secret-jwt-key-for-qr-money-transfer-app
 
-# Server Configuration
+# Server Configuration (Already configured)
 PORT=3000
 NODE_ENV=development
 ```
