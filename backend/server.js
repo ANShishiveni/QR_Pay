@@ -4,6 +4,16 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// Initialize Firebase Admin SDK with error handling
+try {
+  const { initializeFirebase } = require('./config/firebase');
+  initializeFirebase();
+} catch (error) {
+  console.error('❌ Failed to initialize Firebase:', error.message);
+  console.error('Please check your .env file and Firebase configuration');
+  process.exit(1);
+}
+
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const paymentRoutes = require('./routes/payments');

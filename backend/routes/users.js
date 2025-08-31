@@ -1,5 +1,5 @@
 const express = require('express');
-const { realtimeDb } = require('../config/firebase');
+const { getFirebaseServices } = require('../config/firebase');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
@@ -24,6 +24,7 @@ const verifyToken = async (req, res, next) => {
 // Get user profile
 router.get('/profile', verifyToken, async (req, res) => {
   try {
+    const { realtimeDb } = getFirebaseServices();
     const userSnapshot = await realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`).once('value');
     const userData = userSnapshot.val();
 
@@ -48,6 +49,7 @@ router.get('/profile', verifyToken, async (req, res) => {
 router.put('/profile', verifyToken, async (req, res) => {
   try {
     const { firstName, lastName, phoneNumber } = req.body;
+    const { realtimeDb } = getFirebaseServices();
     const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
 
     const updates = {};
@@ -72,6 +74,7 @@ router.put('/profile', verifyToken, async (req, res) => {
 // Get user's linked cards
 router.get('/cards', verifyToken, async (req, res) => {
   try {
+    const { realtimeDb } = getFirebaseServices();
     const userSnapshot = await realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`).once('value');
     const userData = userSnapshot.val();
 
@@ -104,6 +107,7 @@ router.get('/transactions', verifyToken, async (req, res) => {
   try {
     const { limit = 20, offset = 0 } = req.query;
     
+    const { realtimeDb } = getFirebaseServices();
     const transactionsRef = realtimeDb.ref('transactions')
       .orderByChild('userId')
       .equalTo(req.user.uid)
@@ -129,6 +133,7 @@ router.get('/transactions', verifyToken, async (req, res) => {
 // Get user statistics
 router.get('/stats', verifyToken, async (req, res) => {
   try {
+    const { realtimeDb } = getFirebaseServices();
     const transactionsRef = realtimeDb.ref('transactions')
       .orderByChild('userId')
       .equalTo(req.user.uid);

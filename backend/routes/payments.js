@@ -1,6 +1,6 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-const { realtimeDb } = require('../config/firebase');
+const { getFirebaseServices } = require('../config/firebase');
 const { createPaymentMethod, simulateCrossBankTransfer, MOCK_BANKS } = require('../config/stripe');
 const jwt = require('jsonwebtoken');
 
@@ -27,6 +27,7 @@ const verifyToken = async (req, res, next) => {
 router.post('/link-card', verifyToken, async (req, res) => {
   try {
     const { cardNumber, expMonth, expYear, cvc, cardholderName } = req.body;
+    const { realtimeDb } = getFirebaseServices();
 
     if (!cardNumber || !expMonth || !expYear || !cvc || !cardholderName) {
       return res.status(400).json({ error: 'All card fields are required' });
@@ -83,6 +84,7 @@ router.post('/link-card', verifyToken, async (req, res) => {
 router.put('/set-default-card/:cardId', verifyToken, async (req, res) => {
   try {
     const { cardId } = req.params;
+    const { realtimeDb } = getFirebaseServices();
     const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}/cards`);
 
     // Get all user cards
@@ -116,6 +118,7 @@ router.put('/set-default-card/:cardId', verifyToken, async (req, res) => {
 router.delete('/remove-card/:cardId', verifyToken, async (req, res) => {
   try {
     const { cardId } = req.params;
+    const { realtimeDb } = getFirebaseServices();
     const cardRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}/cards/${cardId}`);
 
     const cardSnapshot = await cardRef.once('value');
@@ -137,6 +140,7 @@ router.delete('/remove-card/:cardId', verifyToken, async (req, res) => {
 router.post('/process-payment', verifyToken, async (req, res) => {
   try {
     const { receiverEmail, amount, description, senderCardId } = req.body;
+    const { realtimeDb } = getFirebaseServices();
 
     if (!receiverEmail || !amount || !senderCardId) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -249,6 +253,7 @@ router.post('/process-payment', verifyToken, async (req, res) => {
 router.get('/history', verifyToken, async (req, res) => {
   try {
     const { limit = 20, offset = 0, type } = req.query;
+    const { realtimeDb } = getFirebaseServices();
     
     let query = realtimeDb.ref('transactions')
       .orderByChild('userId')

@@ -1,4 +1,15 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe with error handling
+let stripe;
+try {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY not found in environment variables');
+  }
+  stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  console.log('💳 Stripe initialized successfully');
+} catch (error) {
+  console.error('❌ Stripe initialization failed:', error.message);
+  throw error;
+}
 
 // Test card numbers for different "banks" in Namibia
 const TEST_CARDS = {

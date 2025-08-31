@@ -1,13 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { auth, realtimeDb } = require('../config/firebase');
-const { initializeFirebase } = require('../config/firebase');
+const { getFirebaseServices } = require('../config/firebase');
 
 const router = express.Router();
-
-// Initialize Firebase
-initializeFirebase();
 
 // Middleware to verify JWT token
 const verifyToken = async (req, res, next) => {
@@ -35,6 +31,9 @@ router.post('/register', async (req, res) => {
     if (!email || !password || !firstName || !lastName) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    // Get Firebase services
+    const { auth, realtimeDb } = getFirebaseServices();
 
     // Check if user already exists
     const existingUser = await realtimeDb.ref(`users/${email.replace('.', '_')}`).once('value');
@@ -105,6 +104,9 @@ router.post('/login', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
+
+    // Get Firebase services
+    const { realtimeDb } = getFirebaseServices();
 
     // Get user from Realtime Database
     const userSnapshot = await realtimeDb.ref(`users/${email.replace('.', '_')}`).once('value');

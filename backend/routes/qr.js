@@ -1,7 +1,7 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
-const { realtimeDb } = require('../config/firebase');
+const { getFirebaseServices } = require('../config/firebase');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
@@ -27,6 +27,7 @@ const verifyToken = async (req, res, next) => {
 router.post('/generate', verifyToken, async (req, res) => {
   try {
     const { amount, description, expiresIn = 300 } = req.body; // expiresIn in seconds, default 5 minutes
+    const { realtimeDb } = getFirebaseServices();
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Valid amount is required' });
@@ -96,6 +97,7 @@ router.post('/generate', verifyToken, async (req, res) => {
 router.post('/scan', verifyToken, async (req, res) => {
   try {
     const { qrData } = req.body;
+    const { realtimeDb } = getFirebaseServices();
 
     if (!qrData) {
       return res.status(400).json({ error: 'QR code data is required' });
@@ -175,6 +177,7 @@ router.post('/scan', verifyToken, async (req, res) => {
 router.post('/confirm-payment', verifyToken, async (req, res) => {
   try {
     const { requestId, receiverCardId } = req.body;
+    const { realtimeDb } = getFirebaseServices();
 
     if (!requestId || !receiverCardId) {
       return res.status(400).json({ error: 'Request ID and receiver card ID are required' });
@@ -311,6 +314,7 @@ router.post('/confirm-payment', verifyToken, async (req, res) => {
 router.get('/requests', verifyToken, async (req, res) => {
   try {
     const { status = 'pending' } = req.query;
+    const { realtimeDb } = getFirebaseServices();
     
     const requestsRef = realtimeDb.ref('paymentRequests')
       .orderByChild('senderId')
