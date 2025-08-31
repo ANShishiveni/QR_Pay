@@ -1,0 +1,244 @@
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from 'react-native';
+import {
+  TextInput,
+  Button,
+  Card,
+  Title,
+  Paragraph,
+  Text,
+  ActivityIndicator,
+} from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authAPI } from '../../config/api';
+import { theme, colors, spacing, typography } from '../../styles/theme';
+
+export default function LoginScreen({ navigation }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await authAPI.login({ email, password });
+      const { token, user } = response.data;
+
+      // Store auth data
+      await AsyncStorage.setItem('authToken', token);
+      await AsyncStorage.setItem('userData', JSON.stringify(user));
+
+      // Navigate to main app
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      Alert.alert(
+        'Login Failed',
+        error.response?.data?.error || 'An error occurred during login'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <LinearGradient
+      colors={[colors.primary, colors.primaryDark]}
+      style={styles.container}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <Title style={styles.title}>QR Money Transfer</Title>
+            <Paragraph style={styles.subtitle}>
+              Secure cross-bank payments in Namibia
+            </Paragraph>
+          </View>
+
+          <Card style={styles.card}>
+            <Card.Content>
+              <Title style={styles.cardTitle}>Welcome Back</Title>
+              <Paragraph style={styles.cardSubtitle}>
+                Sign in to your account
+              </Paragraph>
+
+              <TextInput
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                mode="outlined"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                style={styles.input}
+                theme={{
+                  colors: {
+                    primary: colors.primary,
+                  },
+                }}
+              />
+
+              <TextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                mode="outlined"
+                secureTextEntry={!showPassword}
+                autoComplete="password"
+                style={styles.input}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? 'eye-off' : 'eye'}
+                    onPress={() => setShowPassword(!showPassword)}
+                  />
+                }
+                theme={{
+                  colors: {
+                    primary: colors.primary,
+                  },
+                }}
+              />
+
+              <Button
+                mode="contained"
+                onPress={handleLogin}
+                loading={isLoading}
+                disabled={isLoading}
+                style={styles.loginButton}
+                contentStyle={styles.buttonContent}
+                theme={{
+                  colors: {
+                    primary: colors.primary,
+                  },
+                }}
+              >
+                {isLoading ? 'Signing In...' : 'Sign In'}
+              </Button>
+
+              <View style={styles.registerContainer}>
+                <Text style={styles.registerText}>Don't have an account? </Text>
+                <Button
+                  mode="text"
+                  onPress={() => navigation.navigate('Register')}
+                  labelStyle={styles.registerButton}
+                >
+                  Sign Up
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              This is a prototype application for demonstration purposes.
+              All transactions are simulated using sandbox APIs.
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  title: {
+    fontSize: typography.h1.fontSize,
+    fontWeight: typography.h1.fontWeight,
+    color: colors.white,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontSize: typography.body1.fontSize,
+    color: colors.white,
+    textAlign: 'center',
+    opacity: 0.9,
+  },
+  card: {
+    elevation: 8,
+    borderRadius: 16,
+    marginBottom: spacing.lg,
+  },
+  cardTitle: {
+    fontSize: typography.h2.fontSize,
+    fontWeight: typography.h2.fontWeight,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  cardSubtitle: {
+    fontSize: typography.body2.fontSize,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  input: {
+    marginBottom: spacing.md,
+  },
+  loginButton: {
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  buttonContent: {
+    paddingVertical: spacing.sm,
+  },
+  registerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  registerText: {
+    fontSize: typography.body2.fontSize,
+    color: colors.textSecondary,
+  },
+  registerButton: {
+    color: colors.primary,
+    fontSize: typography.body2.fontSize,
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+  },
+  footerText: {
+    fontSize: typography.caption.fontSize,
+    color: colors.white,
+    textAlign: 'center',
+    opacity: 0.8,
+    lineHeight: typography.caption.lineHeight,
+  },
+});

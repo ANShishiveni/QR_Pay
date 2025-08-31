@@ -1,0 +1,500 @@
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import {
+  Card,
+  Title,
+  Paragraph,
+  Button,
+  Text,
+  ActivityIndicator,
+  Divider,
+  Avatar,
+} from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { qrAPI } from '../../config/api';
+import { theme, colors, spacing, typography } from '../../styles/theme';
+
+export default function PaymentConfirmScreen({ route, navigation }) {
+  const { paymentRequest, receiverCard } = route.params;
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleConfirmPayment = async () => {
+    Alert.alert(
+      'Confirm Payment',
+      `Are you sure you want to pay N$ ${paymentRequest.amount.toFixed(2)} to ${paymentRequest.senderName}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: processPayment,
+        },
+      ]
+    );
+  };
+
+  const processPayment = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await qrAPI.confirmPayment({
+        requestId: paymentRequest.id,
+        receiverCardId: receiverCard.id,
+      });
+
+      const { transaction } = response.data;
+
+      Alert.alert(
+        'Payment Successful!',
+        `You have successfully paid N$ ${transaction.amount.toFixed(2)} to ${transaction.senderName}.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'MainTabs' }],
+              });
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Payment error:', error);
+      Alert.alert(
+        'Payment Failed',
+        error.response?.data?.error || 'An error occurred during payment processing. Please try again.'
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-NA', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getExpiryStatus = (expiresAt) => {
+    const expiryDate = new Date(expiresAt);
+    const now = new Date();
+    const diffMs = expiryDate - now;
+    const diffMins = Math.ceil(diffMs / (1000 * 60));
+    
+    if (diffMins <= 0) return { status: 'expired', color: colors.error };
+    if (diffMins <= 2) return { status: 'expiring', color: colors.warning };
+    return { status: 'valid', color: colors.success };
+  };
+
+  const expiryStatus = getExpiryStatus(paymentRequest.expiresAt);
+
+  return (
+    <ScrollView style={styles.container}>
+      {/* Header */}
+      <LinearGradient
+        colors={[colors.primary, colors.primaryDark]}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <Ionicons name="card" size={32} color={colors.white} />
+          <Title style={styles.headerTitle}>Confirm Payment</Title>
+          <Paragraph style={styles.headerSubtitle}>
+            Review and confirm your payment details
+          </Paragraph>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.content}>
+        {/* Payment Request Details */}
+        <Card style={styles.detailsCard}>
+          <Card.Content>
+            <Title style={styles.cardTitle}>Payment Request</Title>
+            
+            <View style={styles.senderInfo}>
+              <Avatar.Text
+                size={50}
+                label={paymentRequest.senderName.split(' ').map(n => n[0]).join('')}
+                style={styles.senderAvatar}
+              />
+              <View style={styles.senderDetails}>
+                <Text style={styles.senderName}>{paymentRequest.senderName}</Text>
+                <Text style={styles.senderLabel}>Requesting payment</Text>
+              </View>
+            </View>
+
+            <Divider style={styles.divider} />
+
+            <View style={styles.amountSection}>
+              <Text style={styles.amountLabel}>Amount to Pay</Text>
+              <Text style={styles.amountValue}>
+                N$ {paymentRequest.amount.toFixed(2)}
+              </Text>
+            </View>
+
+            {paymentRequest.description && (
+              <>
+                <Divider style={styles.divider} />
+                <View style={styles.descriptionSection}>
+                  <Text style={styles.descriptionLabel}>Description</Text>
+                  <Text style={styles.descriptionValue}>
+                    {paymentRequest.description}
+                  </Text>
+                </View>
+              </>
+            )}
+
+            <Divider style={styles.divider} />
+
+            <View style={styles.expirySection}>
+              <View style={styles.expiryInfo}>
+                <Text style={styles.expiryLabel}>Expires</Text>
+                <Text style={[styles.expiryValue, { color: expiryStatus.color }]}>
+                  {formatDate(paymentRequest.expiresAt)}
+                </Text>
+              </View>
+              <View style={[styles.expiryBadge, { backgroundColor: expiryStatus.color }]}>
+                <Text style={styles.expiryBadgeText}>
+                  {expiryStatus.status.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+
+        {/* Payment Method */}
+        <Card style={styles.paymentCard}>
+          <Card.Content>
+            <Title style={styles.cardTitle}>Payment Method</Title>
+            
+            <View style={styles.cardInfo}>
+              <View style={styles.cardIcon}>
+                <Ionicons 
+                  name={receiverCard.brand === 'Visa' ? 'card' : 'card-outline'} 
+                  size={24} 
+                  color={colors.primary} 
+                />
+              </View>
+              <View style={styles.cardDetails}>
+                <Text style={styles.cardBrand}>{receiverCard.brand}</Text>
+                <Text style={styles.cardNumber}>**** **** **** {receiverCard.last4}</Text>
+                <Text style={styles.cardBank}>{receiverCard.bank}</Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+
+        {/* Payment Summary */}
+        <Card style={styles.summaryCard}>
+          <Card.Content>
+            <Title style={styles.cardTitle}>Payment Summary</Title>
+            
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Amount</Text>
+              <Text style={styles.summaryValue}>
+                N$ {paymentRequest.amount.toFixed(2)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Fee</Text>
+              <Text style={styles.summaryValue}>N$ 0.00</Text>
+            </View>
+
+            <Divider style={styles.summaryDivider} />
+
+            <View style={styles.summaryRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>
+                N$ {paymentRequest.amount.toFixed(2)}
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          <Button
+            mode="outlined"
+            onPress={() => navigation.goBack()}
+            style={styles.cancelButton}
+            disabled={isProcessing}
+            theme={{
+              colors: {
+                primary: colors.primary,
+              },
+            }}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            mode="contained"
+            onPress={handleConfirmPayment}
+            loading={isProcessing}
+            disabled={isProcessing || expiryStatus.status === 'expired'}
+            style={styles.confirmButton}
+            contentStyle={styles.buttonContent}
+            theme={{
+              colors: {
+                primary: colors.primary,
+              },
+            }}
+          >
+            {isProcessing ? 'Processing...' : 'Confirm Payment'}
+          </Button>
+        </View>
+
+        {/* Security Notice */}
+        <Card style={styles.securityCard}>
+          <Card.Content>
+            <View style={styles.securityHeader}>
+              <Ionicons name="shield-checkmark" size={20} color={colors.success} />
+              <Text style={styles.securityTitle}>Secure Payment</Text>
+            </View>
+            <Text style={styles.securityText}>
+              Your payment is protected by end-to-end encryption and processed through secure banking channels.
+              This is a prototype application using sandbox APIs for demonstration purposes.
+            </Text>
+          </Card.Content>
+        </Card>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  headerContent: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: typography.h2.fontSize,
+    fontWeight: typography.h2.fontWeight,
+    color: colors.white,
+    marginTop: spacing.sm,
+  },
+  headerSubtitle: {
+    fontSize: typography.body1.fontSize,
+    color: colors.white,
+    opacity: 0.9,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  content: {
+    padding: spacing.lg,
+  },
+  detailsCard: {
+    elevation: 4,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+  },
+  paymentCard: {
+    elevation: 4,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+  },
+  summaryCard: {
+    elevation: 4,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+  },
+  securityCard: {
+    elevation: 2,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+  },
+  cardTitle: {
+    fontSize: typography.h4.fontSize,
+    fontWeight: typography.h4.fontWeight,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  senderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  senderAvatar: {
+    backgroundColor: colors.primary,
+    marginRight: spacing.md,
+  },
+  senderDetails: {
+    flex: 1,
+  },
+  senderName: {
+    fontSize: typography.body1.fontSize,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  senderLabel: {
+    fontSize: typography.caption.fontSize,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  divider: {
+    marginVertical: spacing.md,
+  },
+  amountSection: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  amountLabel: {
+    fontSize: typography.body2.fontSize,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  amountValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  descriptionSection: {
+    paddingVertical: spacing.sm,
+  },
+  descriptionLabel: {
+    fontSize: typography.body2.fontSize,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  descriptionValue: {
+    fontSize: typography.body1.fontSize,
+    color: colors.text,
+  },
+  expirySection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  expiryInfo: {
+    flex: 1,
+  },
+  expiryLabel: {
+    fontSize: typography.body2.fontSize,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  expiryValue: {
+    fontSize: typography.body1.fontSize,
+    fontWeight: '600',
+  },
+  expiryBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 12,
+  },
+  expiryBadgeText: {
+    fontSize: typography.caption.fontSize,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  cardInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  cardDetails: {
+    flex: 1,
+  },
+  cardBrand: {
+    fontSize: typography.body1.fontSize,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  cardNumber: {
+    fontSize: typography.body2.fontSize,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  cardBank: {
+    fontSize: typography.caption.fontSize,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  summaryLabel: {
+    fontSize: typography.body2.fontSize,
+    color: colors.textSecondary,
+  },
+  summaryValue: {
+    fontSize: typography.body2.fontSize,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  summaryDivider: {
+    marginVertical: spacing.sm,
+  },
+  totalLabel: {
+    fontSize: typography.body1.fontSize,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  totalValue: {
+    fontSize: typography.body1.fontSize,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  cancelButton: {
+    flex: 0.48,
+  },
+  confirmButton: {
+    flex: 0.48,
+  },
+  buttonContent: {
+    paddingVertical: spacing.sm,
+  },
+  securityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  securityTitle: {
+    fontSize: typography.body1.fontSize,
+    fontWeight: '600',
+    color: colors.text,
+    marginLeft: spacing.sm,
+  },
+  securityText: {
+    fontSize: typography.caption.fontSize,
+    color: colors.textSecondary,
+    lineHeight: typography.caption.lineHeight,
+  },
+});
