@@ -35,8 +35,11 @@ router.post('/register', async (req, res) => {
     // Get Firebase services
     const { auth, realtimeDb } = getFirebaseServices();
 
+    // Sanitize email for Firebase database key
+    const sanitizedEmail = email.replace(/[.#$[\]]/g, '_');
+
     // Check if user already exists
-    const existingUser = await realtimeDb.ref(`users/${email.replace('.', '_')}`).once('value');
+    const existingUser = await realtimeDb.ref(`users/${sanitizedEmail}`).once('value');
     if (existingUser.exists()) {
       return res.status(400).json({ error: 'User already exists' });
     }
@@ -64,7 +67,7 @@ router.post('/register', async (req, res) => {
       cards: {}
     };
 
-    await realtimeDb.ref(`users/${email.replace('.', '_')}`).set(userData);
+    await realtimeDb.ref(`users/${sanitizedEmail}`).set(userData);
 
     // Generate JWT token
     const token = jwt.sign(
@@ -108,8 +111,11 @@ router.post('/login', async (req, res) => {
     // Get Firebase services
     const { realtimeDb } = getFirebaseServices();
 
+    // Sanitize email for Firebase database key
+    const sanitizedEmail = email.replace(/[.#$[\]]/g, '_');
+
     // Get user from Realtime Database
-    const userSnapshot = await realtimeDb.ref(`users/${email.replace('.', '_')}`).once('value');
+    const userSnapshot = await realtimeDb.ref(`users/${sanitizedEmail}`).once('value');
     const userData = userSnapshot.val();
 
     if (!userData) {

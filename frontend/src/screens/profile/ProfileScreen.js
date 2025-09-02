@@ -18,7 +18,7 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '../../utils/asyncStorage';
 import { userAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
 
@@ -211,7 +211,6 @@ export default function ProfileScreen({ navigation }) {
           mode="outlined"
           onPress={handleLogout}
           style={styles.logoutButton}
-          icon="logout"
           textColor={colors.error}
           buttonColor={colors.white}
           theme={{
@@ -220,7 +219,10 @@ export default function ProfileScreen({ navigation }) {
             },
           }}
         >
-          Logout
+          <View style={styles.buttonContent}>
+            <Ionicons name="log-out" size={20} color={colors.error} style={styles.buttonIcon} />
+            <Text style={[styles.buttonText, { color: colors.error }]}>Logout</Text>
+          </View>
         </Button>
       </View>
     </ScrollView>
@@ -335,5 +337,17 @@ const styles = StyleSheet.create({
   logoutButton: {
     marginTop: spacing.lg,
     borderColor: colors.error,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  buttonText: {
+    fontSize: typography.body1.fontSize,
+    fontWeight: '500',
   },
 });

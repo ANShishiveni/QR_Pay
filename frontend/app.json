@@ -1,29 +1,19 @@
 {
   "expo": {
-    "name": "QR Money Transfer",
-    "slug": "qr-money-transfer",
+    "name": "NamPay",
+    "slug": "nampay",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.qrmoneytransfer.app"
+      "bundleIdentifier": "com.nampay.app"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
-      },
-      "package": "com.qrmoneytransfer.app",
+      "package": "com.nampay.app",
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -31,13 +21,13 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "bundler": "webpack"
     },
     "plugins": [
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to scan QR codes."
+          "cameraPermission": "Allow NamPay to access your camera to scan QR codes."
         }
       ]
     ]

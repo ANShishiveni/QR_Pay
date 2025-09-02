@@ -17,7 +17,6 @@ import {
   Divider,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { qrAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
@@ -124,7 +123,7 @@ export default function QRGenerateScreen({ navigation }) {
                 keyboardType="numeric"
                 placeholder="0.00"
                 style={styles.input}
-                left={<TextInput.Icon icon="currency-usd" />}
+                left={<Ionicons name="cash" size={24} color={colors.primary} style={styles.iconButton} />}
                 theme={{
                   colors: {
                     primary: colors.primary,
@@ -173,12 +172,11 @@ export default function QRGenerateScreen({ navigation }) {
                 <Title style={styles.qrTitle}>Your Payment Request</Title>
                 
                 <View style={styles.qrCodeContainer}>
-                  <QRCode
-                    value={qrCodeData}
-                    size={250}
-                    backgroundColor={colors.white}
-                    color={colors.black}
-                  />
+                  <View style={styles.qrCodePlaceholder}>
+                    <Ionicons name="qr-code" size={120} color={colors.primary} />
+                    <Text style={styles.qrCodeText}>QR Code Generated</Text>
+                    <Text style={styles.qrCodeData}>{qrCodeData}</Text>
+                  </View>
                 </View>
 
                 <View style={styles.paymentDetails}>
@@ -210,28 +208,32 @@ export default function QRGenerateScreen({ navigation }) {
                 mode="outlined"
                 onPress={handleShareQR}
                 style={styles.actionButton}
-                icon="share"
                 theme={{
                   colors: {
                     primary: colors.primary,
                   },
                 }}
               >
-                Share QR Code
+                <View style={styles.buttonContent}>
+                  <Ionicons name="share" size={20} color={colors.primary} style={styles.buttonIcon} />
+                  <Text style={styles.buttonText}>Share QR Code</Text>
+                </View>
               </Button>
 
               <Button
                 mode="contained"
                 onPress={handleReset}
                 style={styles.actionButton}
-                icon="refresh"
                 theme={{
                   colors: {
                     primary: colors.primary,
                   },
                 }}
               >
-                Generate New
+                <View style={styles.buttonContent}>
+                  <Ionicons name="refresh" size={20} color={colors.white} style={styles.buttonIcon} />
+                  <Text style={styles.buttonText}>Generate New</Text>
+                </View>
               </Button>
             </View>
 
@@ -349,6 +351,28 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: spacing.lg,
     elevation: 2,
+    alignItems: 'center',
+  },
+  qrCodePlaceholder: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  qrCodeText: {
+    fontSize: typography.h4.fontSize,
+    fontWeight: typography.h4.fontWeight,
+    color: colors.primary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  qrCodeData: {
+    fontSize: typography.body2.fontSize,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontFamily: 'monospace',
+    backgroundColor: colors.lightGray,
+    padding: spacing.sm,
+    borderRadius: 8,
+    marginTop: spacing.sm,
   },
   paymentDetails: {
     width: '100%',
@@ -399,5 +423,22 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginLeft: spacing.sm,
     flex: 1,
+  },
+  iconButton: {
+    padding: 8,
+    cursor: 'pointer',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  buttonText: {
+    color: colors.white,
+    fontSize: typography.body1.fontSize,
+    fontWeight: '500',
   },
 });

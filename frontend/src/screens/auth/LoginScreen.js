@@ -17,7 +17,8 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '../../utils/asyncStorage';
 import { authAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
 
@@ -35,7 +36,9 @@ export default function LoginScreen({ navigation }) {
 
     setIsLoading(true);
     try {
+      console.log('🎯 Starting login with email:', email);
       const response = await authAPI.login({ email, password });
+      console.log('✅ Login response:', response.data);
       const { token, user } = response.data;
 
       // Store auth data
@@ -48,7 +51,13 @@ export default function LoginScreen({ navigation }) {
         routes: [{ name: 'MainTabs' }],
       });
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
+      console.error('❌ Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack
+      });
       Alert.alert(
         'Login Failed',
         error.response?.data?.error || 'An error occurred during login'
@@ -107,9 +116,12 @@ export default function LoginScreen({ navigation }) {
                 autoComplete="password"
                 style={styles.input}
                 right={
-                  <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color={colors.primary}
                     onPress={() => setShowPassword(!showPassword)}
+                    style={styles.iconButton}
                   />
                 }
                 theme={{
@@ -240,5 +252,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
     lineHeight: typography.caption.lineHeight,
+  },
+  iconButton: {
+    padding: 8,
+    cursor: 'pointer',
   },
 });

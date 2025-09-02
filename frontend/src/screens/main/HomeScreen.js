@@ -18,7 +18,7 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '../../utils/asyncStorage';
 import { userAPI, paymentAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
 

@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider } from 'react-native-paper';
-import FlashMessage from 'react-native-flash-message';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from './src/utils/asyncStorage';
 import { Ionicons } from '@expo/vector-icons';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 
 // Import screens
 import LoginScreen from './src/screens/auth/LoginScreen';
@@ -24,6 +24,16 @@ import { theme } from './src/styles/theme';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Loading Screen
+function LoadingScreen() {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={styles.loadingText}>Loading NamPay...</Text>
+    </View>
+  );
+}
 
 // Main Tab Navigator
 function MainTabs() {
@@ -79,8 +89,7 @@ export default function App() {
   };
 
   if (isLoading) {
-    // You can add a loading screen here
-    return null;
+    return <LoadingScreen />;
   }
 
   return (
@@ -104,7 +113,20 @@ export default function App() {
           )}
         </Stack.Navigator>
       </NavigationContainer>
-      <FlashMessage position="top" />
     </PaperProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 18,
+    color: '#333333',
+  },
+});

@@ -16,7 +16,8 @@ import {
   Text,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '../../utils/asyncStorage';
 import { authAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
 
@@ -69,13 +70,21 @@ export default function RegisterScreen({ navigation }) {
 
     setIsLoading(true);
     try {
+      console.log('🎯 Starting registration with data:', { ...formData, password: '[HIDDEN]' });
+      
       const { confirmPassword, ...registrationData } = formData;
+      console.log('📤 Sending registration request to API...');
+      console.log('📋 Registration data:', registrationData);
+      
       const response = await authAPI.register(registrationData);
+      console.log('✅ Registration response:', response.data);
+      
       const { token, user } = response.data;
 
       // Store auth data
       await AsyncStorage.setItem('authToken', token);
       await AsyncStorage.setItem('userData', JSON.stringify(user));
+      console.log('Auth data stored successfully');
 
       Alert.alert(
         'Registration Successful',
@@ -93,10 +102,17 @@ export default function RegisterScreen({ navigation }) {
         ]
       );
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('❌ Registration error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config,
+        stack: error.stack
+      });
+      
       Alert.alert(
         'Registration Failed',
-        error.response?.data?.error || 'An error occurred during registration'
+        error.response?.data?.error || error.message || 'An error occurred during registration'
       );
     } finally {
       setIsLoading(false);
@@ -188,9 +204,12 @@ export default function RegisterScreen({ navigation }) {
                 autoComplete="password"
                 style={styles.input}
                 right={
-                  <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color={colors.primary}
                     onPress={() => setShowPassword(!showPassword)}
+                    style={styles.iconButton}
                   />
                 }
                 theme={{
@@ -209,9 +228,12 @@ export default function RegisterScreen({ navigation }) {
                 autoComplete="password"
                 style={styles.input}
                 right={
-                  <TextInput.Icon
-                    icon={showConfirmPassword ? 'eye-off' : 'eye'}
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color={colors.primary}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.iconButton}
                   />
                 }
                 theme={{
@@ -336,5 +358,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
     lineHeight: typography.caption.lineHeight,
+  },
+  iconButton: {
+    padding: 8,
+    cursor: 'pointer',
   },
 });
