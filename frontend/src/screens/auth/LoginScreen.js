@@ -18,15 +18,16 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '../../utils/asyncStorage';
 import { authAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -41,15 +42,16 @@ export default function LoginScreen({ navigation }) {
       console.log('✅ Login response:', response.data);
       const { token, user } = response.data;
 
-      // Store auth data
-      await AsyncStorage.setItem('authToken', token);
-      await AsyncStorage.setItem('userData', JSON.stringify(user));
+      // Use AuthContext to handle login
+      await login(token, user);
+      console.log('🔐 Auth data stored successfully');
 
-      // Navigate to main app
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      });
+      // Show success message
+      console.log('🎉 Login successful! Navigating to home...');
+      
+      if (Platform.OS === 'web') {
+        alert('Login Successful! Welcome back!');
+      }
     } catch (error) {
       console.error('❌ Login error:', error);
       console.error('❌ Login error details:', {
@@ -58,10 +60,17 @@ export default function LoginScreen({ navigation }) {
         status: error.response?.status,
         stack: error.stack
       });
-      Alert.alert(
-        'Login Failed',
-        error.response?.data?.error || 'An error occurred during login'
-      );
+      const errorMessage = error.response?.data?.error || 'An error occurred during login';
+      console.error('❌ Login failed:', errorMessage);
+      
+      if (Platform.OS === 'web') {
+        alert(`Login Failed: ${errorMessage}`);
+      } else {
+        Alert.alert(
+          'Login Failed',
+          errorMessage
+        );
+      }
     } finally {
       setIsLoading(false);
     }

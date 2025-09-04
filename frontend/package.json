@@ -21,7 +21,7 @@
     "axios": "^1.7.2",
     "babel-preset-expo": "~13.0.0",
     "expo": "53.0.22",
-    "expo-barcode-scanner": "~12.5.3",
+    "expo-barcode-scanner": "~12.9.2",
     "expo-camera": "~16.1.11",
     "expo-linear-gradient": "~14.1.5",
     "expo-permissions": "~14.2.1",

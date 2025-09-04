@@ -18,14 +18,15 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '../../utils/asyncStorage';
 import { userAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     loadUserData();
@@ -34,9 +35,8 @@ export default function ProfileScreen({ navigation }) {
 
   const loadUserData = async () => {
     try {
-      const storedUserData = await AsyncStorage.getItem('userData');
-      if (storedUserData) {
-        setUserData(JSON.parse(storedUserData));
+      if (user) {
+        setUserData(user);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -74,13 +74,8 @@ export default function ProfileScreen({ navigation }) {
 
   const performLogout = async () => {
     try {
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('userData');
-      
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
+      await logout();
+      console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout error:', error);
     }

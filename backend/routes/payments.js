@@ -255,26 +255,35 @@ router.get('/history', verifyToken, async (req, res) => {
     const { limit = 20, offset = 0, type } = req.query;
     const { realtimeDb } = getFirebaseServices();
     
+    // Use the indexed query for better performance
     let query = realtimeDb.ref('transactions')
       .orderByChild('userId')
       .equalTo(req.user.uid);
 
-    if (type && (type === 'send' || type === 'receive')) {
-      // Note: Firebase doesn't support multiple orderByChild filters
-      // This is a simplified implementation
-    }
-
-    const snapshot = await query.limitToLast(parseInt(limit) + parseInt(offset)).once('value');
+    // If type filter is specified, we'll filter after fetching
+    // Firebase doesn't support multiple orderByChild filters efficiently
+    const snapshot = await query.once('value');
     const transactions = snapshot.val() || {};
 
-    // Convert to array and sort by timestamp
-    const transactionArray = Object.keys(transactions)
+    // Convert to array and apply filters
+    let transactionArray = Object.keys(transactions)
       .map(id => ({ id, ...transactions[id] }))
       .filter(t => !type || t.type === type)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    res.json({ transactions: transactionArray });
+    // Apply pagination
+    const totalCount = transactionArray.length;
+    transactionArray = transactionArray.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+
+    res.json({ 
+      transactions: transactionArray,
+      pagination: {
+        total: totalCount,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: parseInt(offset) + parseInt(limit) < totalCount
+      }
+    });
 
   } catch (error) {
     console.error('Get payment history error:', error);

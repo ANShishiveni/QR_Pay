@@ -17,9 +17,9 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '../../utils/asyncStorage';
 import { authAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterScreen({ navigation }) {
   const [formData, setFormData] = useState({
@@ -33,6 +33,7 @@ export default function RegisterScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { login } = useAuth();
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -81,26 +82,29 @@ export default function RegisterScreen({ navigation }) {
       
       const { token, user } = response.data;
 
-      // Store auth data
-      await AsyncStorage.setItem('authToken', token);
-      await AsyncStorage.setItem('userData', JSON.stringify(user));
+      // Use AuthContext to handle login
+      await login(token, user);
       console.log('Auth data stored successfully');
 
-      Alert.alert(
-        'Registration Successful',
-        'Your account has been created successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainTabs' }],
-              });
+      // Show success message
+      console.log('🎉 Registration successful! Navigating to home...');
+      
+      if (Platform.OS === 'web') {
+        alert('Registration Successful! Your account has been created successfully!');
+      } else {
+        Alert.alert(
+          'Registration Successful',
+          'Your account has been created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigation will be handled by AuthContext
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
     } catch (error) {
       console.error('❌ Registration error details:', {
         message: error.message,
@@ -110,10 +114,18 @@ export default function RegisterScreen({ navigation }) {
         stack: error.stack
       });
       
-      Alert.alert(
-        'Registration Failed',
-        error.response?.data?.error || error.message || 'An error occurred during registration'
-      );
+      // Show error message
+      const errorMessage = error.response?.data?.error || error.message || 'An error occurred during registration';
+      console.error('❌ Registration failed:', errorMessage);
+      
+      if (Platform.OS === 'web') {
+        alert(`Registration Failed: ${errorMessage}`);
+      } else {
+        Alert.alert(
+          'Registration Failed',
+          errorMessage
+        );
+      }
     } finally {
       setIsLoading(false);
     }

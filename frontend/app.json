@@ -29,6 +29,12 @@
         {
           "cameraPermission": "Allow NamPay to access your camera to scan QR codes."
         }
+      ],
+      [
+        "expo-barcode-scanner",
+        {
+          "cameraPermission": "Allow NamPay to access your camera to scan QR codes."
+        }
       ]
     ]
   }
