@@ -147,8 +147,8 @@ export default function ProfileScreen({ navigation }) {
             <List.Item
               title="My Cards"
               description="Manage your linked payment cards"
-              left={(props) => <List.Icon {...props} icon="credit-card" color={colors.primary} />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              left={(props) => <Ionicons name="card" size={24} color={colors.primary} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('Cards')}
               style={styles.menuItem}
             />
@@ -156,8 +156,8 @@ export default function ProfileScreen({ navigation }) {
             <List.Item
               title="Transaction History"
               description="View all your payment history"
-              left={(props) => <List.Icon {...props} icon="history" color={colors.primary} />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              left={(props) => <Ionicons name="time" size={24} color={colors.primary} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('Transactions')}
               style={styles.menuItem}
             />
@@ -165,8 +165,8 @@ export default function ProfileScreen({ navigation }) {
             <List.Item
               title="Security Settings"
               description="Manage your account security"
-              left={(props) => <List.Icon {...props} icon="shield-account" color={colors.primary} />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              left={(props) => <Ionicons name="shield-checkmark" size={24} color={colors.primary} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => Alert.alert('Coming Soon', 'Security settings will be available in a future update.')}
               style={styles.menuItem}
             />
@@ -174,8 +174,8 @@ export default function ProfileScreen({ navigation }) {
             <List.Item
               title="Help & Support"
               description="Get help and contact support"
-              left={(props) => <List.Icon {...props} icon="help-circle" color={colors.primary} />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              left={(props) => <Ionicons name="help-circle" size={24} color={colors.primary} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => Alert.alert('Help & Support', 'For support, please contact us at support@qrmoneytransfer.com')}
               style={styles.menuItem}
             />

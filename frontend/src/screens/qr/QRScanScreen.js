@@ -15,7 +15,7 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera } from 'expo-camera';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+// Using expo-camera for barcode scanning (expo-barcode-scanner is deprecated)
 import { Ionicons } from '@expo/vector-icons';
 import { qrAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
@@ -135,10 +135,9 @@ export default function QRScanScreen({ navigation }) {
 
       {/* Camera View */}
       <View style={styles.cameraContainer}>
-        <BarCodeScanner
+        <Camera
           onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
           style={styles.camera}
-          barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
         />
 
         {/* Overlay */}

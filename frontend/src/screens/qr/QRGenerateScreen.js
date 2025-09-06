@@ -5,6 +5,7 @@ import {
   ScrollView,
   Alert,
   Share,
+  Image,
 } from 'react-native';
 import {
   Card,
@@ -27,6 +28,7 @@ export default function QRGenerateScreen({ navigation }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [qrCodeData, setQrCodeData] = useState(null);
   const [paymentRequest, setPaymentRequest] = useState(null);
+  const [qrCodeError, setQrCodeError] = useState(null);
 
   const handleGenerateQR = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -35,6 +37,7 @@ export default function QRGenerateScreen({ navigation }) {
     }
 
     setIsGenerating(true);
+    setQrCodeError(null);
     try {
       const response = await qrAPI.generateQR({
         amount: parseFloat(amount),
@@ -52,6 +55,7 @@ export default function QRGenerateScreen({ navigation }) {
       );
     } catch (error) {
       console.error('Generate QR error:', error);
+      setQrCodeError(error.response?.data?.error || 'Failed to generate QR code');
       Alert.alert(
         'Error',
         error.response?.data?.error || 'Failed to generate QR code'
@@ -79,6 +83,7 @@ export default function QRGenerateScreen({ navigation }) {
     setDescription('');
     setQrCodeData(null);
     setPaymentRequest(null);
+    setQrCodeError(null);
   };
 
   const formatExpiryTime = (expiresAt) => {
@@ -172,11 +177,29 @@ export default function QRGenerateScreen({ navigation }) {
                 <Title style={styles.qrTitle}>Your Payment Request</Title>
                 
                 <View style={styles.qrCodeContainer}>
-                  <View style={styles.qrCodePlaceholder}>
-                    <Ionicons name="qr-code" size={120} color={colors.primary} />
-                    <Text style={styles.qrCodeText}>QR Code Generated</Text>
-                    <Text style={styles.qrCodeData}>{qrCodeData}</Text>
-                  </View>
+                  {qrCodeError ? (
+                    <View style={styles.qrCodeErrorContainer}>
+                      <Ionicons name="alert-circle" size={60} color={colors.error} />
+                      <Text style={styles.qrCodeErrorText}>Failed to Generate QR Code</Text>
+                      <Text style={styles.qrCodeErrorDetails}>{qrCodeError}</Text>
+                    </View>
+                  ) : qrCodeData ? (
+                    <View style={styles.qrCodeImageContainer}>
+                      <Image 
+                        source={{ uri: qrCodeData }} 
+                        style={styles.qrCodeImage}
+                        resizeMode="contain"
+                      />
+                      <Text style={styles.qrCodeText}>QR Code Generated</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.qrCodePlaceholder}>
+                      <Ionicons name="qr-code" size={120} color={colors.primary} />
+                      <Text style={styles.qrCodeText}>
+                        {isGenerating ? 'Generating QR Code...' : 'QR Code will appear here'}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.paymentDetails}>
@@ -356,6 +379,34 @@ const styles = StyleSheet.create({
   qrCodePlaceholder: {
     alignItems: 'center',
     padding: spacing.lg,
+  },
+  qrCodeImageContainer: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  qrCodeImage: {
+    width: 250,
+    height: 250,
+    borderRadius: 8,
+    marginBottom: spacing.sm,
+  },
+  qrCodeErrorContainer: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  qrCodeErrorText: {
+    fontSize: typography.h4.fontSize,
+    fontWeight: typography.h4.fontWeight,
+    color: colors.error,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  qrCodeErrorDetails: {
+    fontSize: typography.body2.fontSize,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   qrCodeText: {
     fontSize: typography.h4.fontSize,
