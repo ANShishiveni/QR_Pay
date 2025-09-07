@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { qrAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
@@ -22,20 +22,11 @@ import { theme, colors, spacing, typography } from '../../styles/theme';
 const { width, height } = Dimensions.get('window');
 
 export default function QRScanScreen({ navigation }) {
-  const [hasPermission, setHasPermission] = useState(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentRequest, setPaymentRequest] = useState(null);
   const [receiverCard, setReceiverCard] = useState(null);
-
-  useEffect(() => {
-    getCameraPermissions();
-  }, []);
-
-  const getCameraPermissions = async () => {
-    const { status } = await BarCodeScanner.requestPermissionsAsync();
-    setHasPermission(status === 'granted');
-  };
 
   const handleBarCodeScanned = async ({ type, data }) => {
     if (scanned || isProcessing) return;
@@ -83,7 +74,7 @@ export default function QRScanScreen({ navigation }) {
     setReceiverCard(null);
   };
 
-  if (hasPermission === null) {
+  if (!permission) {
     return (
       <View style={styles.permissionContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -92,7 +83,7 @@ export default function QRScanScreen({ navigation }) {
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
         <Ionicons name="camera-off" size={64} color={colors.gray} />
@@ -102,7 +93,7 @@ export default function QRScanScreen({ navigation }) {
         </Paragraph>
         <Button
           mode="contained"
-          onPress={getCameraPermissions}
+          onPress={requestPermission}
           style={styles.permissionButton}
           theme={{
             colors: {
@@ -134,10 +125,13 @@ export default function QRScanScreen({ navigation }) {
 
       {/* Camera View */}
       <View style={styles.cameraContainer}>
-        <BarCodeScanner
-          onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+        <CameraView
           style={styles.camera}
-          barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+          facing="back"
+          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ["qr"],
+          }}
         />
 
         {/* Overlay */}

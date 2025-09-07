@@ -322,4 +322,12 @@ Payment Request → Frontend → API Gateway → Payment Routes → Stripe API �
 
 ---
 
+User A (Sender)                    User B (Receiver)
+     ↓                                    ↓
+Generates QR Code              →    Scans QR Code
+     ↓                                    ↓
+Waits for Payment              →    Confirms Payment
+     ↓                                    ↓
+Receives Money                 ←    Pays Money
+
 *This document provides a comprehensive overview of the NamPay system architecture. For detailed implementation guides, refer to the individual component documentation.*
