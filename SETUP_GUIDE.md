@@ -156,6 +156,12 @@ The application includes test card numbers for different "banks":
 - **Bank Windhoek**: 5555555555554444
 - **Nedbank**: 2223003122003222
 
+Visa: 4111 1111 1111 1111
+Mastercard: 5555 5555 5555 4444
+Amex: 3782 822463 10005
+FNB: 4242 4242 4242 4242
+Standard Bank: 4000 0566 5566 5556
+
 Use any future expiry date and any 3-digit CVC.
 
 ### Testing Flow

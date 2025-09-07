@@ -79,9 +79,10 @@ export const userAPI = {
 // Payment API endpoints
 export const paymentAPI = {
   getCards: () => apiClient.get('/api/payments/cards'),
-  addCard: (cardData) => apiClient.post('/api/payments/cards', cardData),
-  removeCard: (cardId) => apiClient.delete(`/api/payments/cards/${cardId}`),
-  makePayment: (paymentData) => apiClient.post('/api/payments/process', paymentData),
+  addCard: (cardData) => apiClient.post('/api/payments/link-card', cardData),
+  removeCard: (cardId) => apiClient.delete(`/api/payments/remove-card/${cardId}`),
+  setDefaultCard: (cardId) => apiClient.put(`/api/payments/set-default-card/${cardId}`),
+  makePayment: (paymentData) => apiClient.post('/api/payments/process-payment', paymentData),
   getPaymentHistory: () => apiClient.get('/api/payments/history'),
 };
 
@@ -89,6 +90,7 @@ export const paymentAPI = {
 export const qrAPI = {
   generateQR: (data) => apiClient.post('/api/qr/generate', data),
   scanQR: (qrData) => apiClient.post('/api/qr/scan', qrData),
+  confirmPayment: (paymentData) => apiClient.post('/api/qr/confirm-payment', paymentData),
   getQRHistory: () => apiClient.get('/api/qr/history'),
 };
 

@@ -14,8 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Camera } from 'expo-camera';
-// Using expo-camera for barcode scanning (expo-barcode-scanner is deprecated)
+import { BarCodeScanner } from 'expo-barcode-scanner';
 import { Ionicons } from '@expo/vector-icons';
 import { qrAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
@@ -34,7 +33,7 @@ export default function QRScanScreen({ navigation }) {
   }, []);
 
   const getCameraPermissions = async () => {
-    const { status } = await Camera.requestCameraPermissionsAsync();
+    const { status } = await BarCodeScanner.requestPermissionsAsync();
     setHasPermission(status === 'granted');
   };
 
@@ -135,18 +134,19 @@ export default function QRScanScreen({ navigation }) {
 
       {/* Camera View */}
       <View style={styles.cameraContainer}>
-        <Camera
+        <BarCodeScanner
           onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
           style={styles.camera}
+          barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
         />
 
         {/* Overlay */}
         <View style={styles.overlay}>
           <View style={styles.scanArea}>
-            <View style={styles.corner} style={[styles.corner, styles.topLeft]} />
-            <View style={styles.corner} style={[styles.corner, styles.topRight]} />
-            <View style={styles.corner} style={[styles.corner, styles.bottomLeft]} />
-            <View style={styles.corner} style={[styles.corner, styles.bottomRight]} />
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
           </View>
         </View>
 

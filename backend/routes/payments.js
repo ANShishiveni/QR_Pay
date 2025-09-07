@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getFirebaseServices } = require('../config/firebase');
 const { createPaymentMethod, simulateCrossBankTransfer, MOCK_BANKS } = require('../config/stripe');
 const jwt = require('jsonwebtoken');
+const { validateCard } = require('../utils/cardValidation');
 
 const router = express.Router();
 
@@ -23,29 +24,67 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+// Get user's linked cards
+router.get('/cards', verifyToken, async (req, res) => {
+  try {
+    const { realtimeDb } = getFirebaseServices();
+    const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}/cards`);
+    
+    const cardsSnapshot = await userRef.once('value');
+    const cards = cardsSnapshot.val() || {};
+    
+    // Convert to array format for frontend
+    const cardsArray = Object.keys(cards).map(cardId => ({
+      id: cardId,
+      last4: cards[cardId].last4,
+      brand: cards[cardId].brand,
+      bank: cards[cardId].bank,
+      cardholderName: cards[cardId].cardholderName,
+      isDefault: cards[cardId].isDefault,
+      createdAt: cards[cardId].createdAt
+    }));
+    
+    res.json({ 
+      cards: cardsArray,
+      count: cardsArray.length
+    });
+    
+  } catch (error) {
+    console.error('Get cards error:', error);
+    res.status(500).json({ error: 'Failed to get cards', details: error.message });
+  }
+});
+
 // Link a card to user account
 router.post('/link-card', verifyToken, async (req, res) => {
   try {
     const { cardNumber, expMonth, expYear, cvc, cardholderName } = req.body;
     const { realtimeDb } = getFirebaseServices();
 
-    if (!cardNumber || !expMonth || !expYear || !cvc || !cardholderName) {
-      return res.status(400).json({ error: 'All card fields are required' });
+    // Validate card data using comprehensive validation
+    const validation = validateCard({ cardNumber, expMonth, expYear, cvc, cardholderName });
+    if (!validation.isValid) {
+      return res.status(400).json({ 
+        error: 'Card validation failed', 
+        details: validation.errors 
+      });
     }
 
+    // Clean card number (remove spaces) for Stripe
+    const cleanCardNumber = cardNumber.replace(/\s/g, '');
+    
     // Create payment method with Stripe
     const paymentMethod = await createPaymentMethod({
-      number: cardNumber,
+      number: cleanCardNumber,
       exp_month: parseInt(expMonth),
       exp_year: parseInt(expYear),
       cvc: cvc
     });
 
     // Determine bank from card number
-    const bank = MOCK_BANKS[cardNumber] || 'Unknown Bank';
-    const last4 = cardNumber.slice(-4);
-    const brand = cardNumber.startsWith('4') ? 'Visa' : 
-                  cardNumber.startsWith('5') ? 'Mastercard' : 'Unknown';
+    const bank = MOCK_BANKS[cleanCardNumber] || 'Unknown Bank';
+    const last4 = paymentMethod.card.last4;
+    const brand = paymentMethod.card.brand.charAt(0).toUpperCase() + paymentMethod.card.brand.slice(1);
 
     // Store card information in Firebase
     const cardId = uuidv4();

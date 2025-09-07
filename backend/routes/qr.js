@@ -230,10 +230,11 @@ router.post('/confirm-payment', verifyToken, async (req, res) => {
     const senderCardData = senderCards[senderDefaultCardId];
 
     // Simulate payment processing
+    // The receiver is paying the sender, so money flows from receiver to sender
     const { simulateCrossBankTransfer } = require('../config/stripe');
     const transferResult = await simulateCrossBankTransfer(
-      { number: receiverCardData.paymentMethodId },
-      { number: senderCardData.paymentMethodId },
+      { number: receiverCardData.paymentMethodId }, // Receiver's card (money source)
+      { number: senderCardData.paymentMethodId },    // Sender's card (money destination)
       paymentRequest.amount
     );
 
@@ -253,7 +254,7 @@ router.post('/confirm-payment', verifyToken, async (req, res) => {
     const transactionId = uuidv4();
     const timestamp = new Date().toISOString();
 
-    // Receiver transaction (money going out)
+    // Receiver transaction (money going out - paying the sender)
     const receiverTransaction = {
       id: transactionId,
       userId: req.user.uid,
@@ -269,7 +270,7 @@ router.post('/confirm-payment', verifyToken, async (req, res) => {
       receiverBank: transferResult.receiverBank
     };
 
-    // Sender transaction (money coming in)
+    // Sender transaction (money coming in - receiving from receiver)
     const senderTransaction = {
       id: transactionId,
       userId: paymentRequest.senderId,

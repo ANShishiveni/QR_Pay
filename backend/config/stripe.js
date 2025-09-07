@@ -49,17 +49,31 @@ const MOCK_BANKS = {
 
 const createPaymentMethod = async (cardDetails) => {
   try {
-    const paymentMethod = await stripe.paymentMethods.create({
+    // For development/testing, we'll create a mock payment method
+    // instead of calling Stripe's API with raw card data
+    const cleanCardNumber = cardDetails.number.replace(/\s/g, '');
+    
+    // Generate a mock payment method ID
+    const mockPaymentMethodId = `pm_mock_${cleanCardNumber.slice(-8)}_${Date.now()}`;
+    
+    // Determine card brand
+    const brand = cleanCardNumber.startsWith('4') ? 'visa' : 
+                  cleanCardNumber.startsWith('5') ? 'mastercard' : 
+                  cleanCardNumber.startsWith('3') ? 'amex' : 'unknown';
+    
+    // Return mock payment method object
+    return {
+      id: mockPaymentMethodId,
       type: 'card',
       card: {
-        number: cardDetails.number,
+        brand: brand,
+        last4: cleanCardNumber.slice(-4),
         exp_month: cardDetails.exp_month,
         exp_year: cardDetails.exp_year,
-        cvc: cardDetails.cvc,
+        funding: 'credit'
       },
-    });
-    
-    return paymentMethod;
+      created: Math.floor(Date.now() / 1000)
+    };
   } catch (error) {
     console.error('Error creating payment method:', error);
     throw error;
@@ -86,24 +100,26 @@ const createPaymentIntent = async (amount, currency = 'NAD', paymentMethodId) =>
 
 const simulateCrossBankTransfer = async (senderCard, receiverCard, amount) => {
   try {
-    // Create payment method for sender
-    const senderPaymentMethod = await createPaymentMethod(senderCard);
-    
-    // Create payment intent
-    const paymentIntent = await createPaymentIntent(amount, 'NAD', senderPaymentMethod.id);
-    
-    // Simulate cross-bank transfer
+    // For development/testing, simulate the transfer without calling Stripe API
     const senderBank = MOCK_BANKS[senderCard.number] || 'Unknown Bank';
     const receiverBank = MOCK_BANKS[receiverCard.number] || 'Unknown Bank';
     
+    // Generate mock transaction ID
+    const mockTransactionId = `pi_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     return {
       success: true,
-      paymentIntent,
+      paymentIntent: {
+        id: mockTransactionId,
+        status: 'succeeded',
+        amount: Math.round(amount * 100),
+        currency: 'nad'
+      },
       senderBank,
       receiverBank,
       amount,
-      transactionId: paymentIntent.id,
-      status: paymentIntent.status
+      transactionId: mockTransactionId,
+      status: 'succeeded'
     };
   } catch (error) {
     console.error('Error in cross-bank transfer:', error);
