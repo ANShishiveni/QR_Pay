@@ -144,9 +144,9 @@ export default function TransactionsScreen({ navigation }) {
               {formatAmount(item.amount, item.type)}
             </Text>
             <Chip
-              mode="outlined"
+              mode="flat"
               textStyle={styles.statusChipText}
-              style={[styles.statusChip, { borderColor: getStatusColor(item.status) }]}
+              style={[styles.statusChip, { backgroundColor: getStatusColor(item.status) }]}
             >
               {item.status}
             </Chip>
@@ -372,10 +372,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   statusChip: {
-    height: 24,
+    height: 28,
+    minWidth: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statusChipText: {
     fontSize: typography.caption.fontSize,
+    fontWeight: '600',
+    color: colors.white,
+    textTransform: 'capitalize',
+    textAlign: 'center',
+    lineHeight: typography.caption.fontSize,
   },
   bankInfo: {
     marginTop: spacing.md,
