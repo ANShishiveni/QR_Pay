@@ -17,6 +17,7 @@ import QRScanScreen from './src/screens/qr/QRScanScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import CardsScreen from './src/screens/profile/CardsScreen';
 import TransactionsScreen from './src/screens/profile/TransactionsScreen';
+import SettingsScreen from './src/screens/profile/SettingsScreen';
 import PaymentConfirmScreen from './src/screens/payment/PaymentConfirmScreen';
 
 // Import theme
@@ -83,6 +84,7 @@ function AppContent() {
             <Stack.Screen name="PaymentConfirm" component={PaymentConfirmScreen} />
             <Stack.Screen name="Cards" component={CardsScreen} />
             <Stack.Screen name="Transactions" component={TransactionsScreen} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
           </>
         ) : (
           <>

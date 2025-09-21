@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '../utils/asyncStorage';
 
 // Base API configuration
-const API_BASE_URL = 'http://192.168.43.249:3000'; // Your computer's IP address
+const API_BASE_URL = 'http://10.12.12.10:3000'; // Your computer's IP address
 
 // Test API connection
 console.log('🔗 API Base URL:', API_BASE_URL);
@@ -74,6 +74,12 @@ export const userAPI = {
   getTransactions: (params) => apiClient.get('/api/users/transactions', { params }),
   getBalance: () => apiClient.get('/api/users/balance'),
   getStats: () => apiClient.get('/api/users/stats'),
+  uploadPhoto: (formData) => apiClient.post('/api/users/photo', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+  changePassword: (passwordData) => apiClient.put('/api/users/password', passwordData),
 };
 
 // Payment API endpoints

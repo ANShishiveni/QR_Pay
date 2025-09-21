@@ -66,7 +66,8 @@ const getFirebaseServices = () => {
   return {
     db: admin.firestore(),
     auth: admin.auth(),
-    realtimeDb: admin.database()
+    realtimeDb: admin.database(),
+    storage: admin.storage()
   };
 };
 

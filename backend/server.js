@@ -34,13 +34,15 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://localhost:19006', 
+      origin: [
+    'http://localhost:3000',
+    'http://localhost:19006',
     'http://127.0.0.1:19006',
-    'http://10.178.3.10:19006',  // Phone browser accessing web version
-    'exp://10.178.3.10:8081',   // Expo Go app
-    'exp://192.168.1.100:19000'
+    'http://10.12.12.10:19006',
+    'exp://10.12.12.10:8081',
+    'http://10.139.208.10:19006',
+    'exp://10.139.208.10:8081',
+    'exp://192.168.1.100:19000',
   ],
   credentials: true
 }));
@@ -78,10 +80,11 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`🌐 Network access: http://10.12.12.10:${PORT}/api/health`);
 });
 
 module.exports = app;

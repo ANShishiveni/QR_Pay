@@ -5,6 +5,7 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
 import {
   Card,
@@ -20,7 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '../../utils/asyncStorage';
 import { userAPI, paymentAPI } from '../../config/api';
-import { theme, colors, spacing, typography } from '../../styles/theme';
+import { colors, spacing } from '../../styles/theme';
 
 export default function HomeScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -37,12 +38,19 @@ export default function HomeScreen({ navigation }) {
 
   const loadUserData = async () => {
     try {
+      // Load fresh profile data from API to get photo URL
+      const response = await userAPI.getProfile();
+      setUserData(response.data.user);
+      
+      // Also store in AsyncStorage for offline access
+      await AsyncStorage.setItem('userData', JSON.stringify(response.data.user));
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      // Fallback to stored data
       const storedUserData = await AsyncStorage.getItem('userData');
       if (storedUserData) {
         setUserData(JSON.parse(storedUserData));
       }
-    } catch (error) {
-      console.error('Error loading user data:', error);
     }
   };
 
@@ -96,7 +104,16 @@ export default function HomeScreen({ navigation }) {
   };
 
   const formatAmount = (amount) => {
-    return `N$ ${parseFloat(amount).toFixed(2)}`;
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount)) return 'N$ 0.00';
+    
+    // Format with commas for thousands separator
+    const formatted = numAmount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    return `N$ ${formatted}`;
   };
 
   const formatDate = (dateString) => {
@@ -132,11 +149,15 @@ export default function HomeScreen({ navigation }) {
       >
         <View style={styles.headerContent}>
           <View style={styles.userInfo}>
-            <Avatar.Text
-              size={50}
-              label={`${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`}
-              style={styles.avatar}
-            />
+            {userData?.photoUrl ? (
+              <Image source={{ uri: userData.photoUrl }} style={styles.profilePhoto} />
+            ) : (
+              <Avatar.Text
+                size={50}
+                label={`${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`}
+                style={styles.avatar}
+              />
+            )}
             <View style={styles.userDetails}>
               <Text style={styles.welcomeText}>Welcome back,</Text>
               <Text style={styles.userName}>
@@ -154,14 +175,16 @@ export default function HomeScreen({ navigation }) {
           <Card style={styles.actionCard} onPress={() => handleQuickAction('generate')}>
             <Card.Content style={styles.actionContent}>
               <Ionicons name="qr-code" size={32} color={colors.primary} />
-              <Text style={styles.actionText}>Generate QR</Text>
+              <Text style={styles.actionText}>Request Payment</Text>
+              <Text style={styles.actionSubtext}>(QR)</Text>
             </Card.Content>
           </Card>
 
           <Card style={styles.actionCard} onPress={() => handleQuickAction('scan')}>
             <Card.Content style={styles.actionContent}>
               <Ionicons name="scan" size={32} color={colors.secondary} />
-              <Text style={styles.actionText}>Scan QR</Text>
+              <Text style={styles.actionText}>Send Money</Text>
+              <Text style={styles.actionSubtext}>(Scan QR)</Text>
             </Card.Content>
           </Card>
 
@@ -293,7 +316,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: spacing.md,
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.textSecondary,
   },
   header: {
@@ -314,25 +337,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     marginRight: spacing.md,
   },
+  profilePhoto: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.white,
+    marginRight: spacing.md,
+  },
   userDetails: {
     flex: 1,
   },
   welcomeText: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.white,
     opacity: 0.9,
   },
   userName: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.white,
   },
   quickActions: {
     padding: spacing.lg,
   },
   sectionTitle: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.md,
   },
@@ -351,10 +381,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   actionText: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.text,
     marginTop: spacing.sm,
     textAlign: 'center',
+    fontWeight: '600',
+  },
+  actionSubtext: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   statsSection: {
     paddingHorizontal: spacing.lg,
@@ -363,26 +401,34 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: spacing.xs,
   },
   statCard: {
     flex: 1,
     marginHorizontal: spacing.xs,
     elevation: 2,
+    minWidth: 0, // Allow flex shrinking
   },
   statContent: {
     alignItems: 'center',
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
   },
   statValue: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.primary,
+    textAlign: 'center',
+    flexWrap: 'wrap',
+    maxWidth: '100%',
   },
   statLabel: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 11,
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
+    flexWrap: 'wrap',
+    maxWidth: '100%',
   },
   transactionsSection: {
     paddingHorizontal: spacing.lg,
@@ -418,17 +464,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   transactionDescription: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     fontWeight: '500',
     color: colors.text,
   },
   transactionPerson: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
   transactionDate: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
@@ -436,7 +482,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   amountText: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     fontWeight: '600',
   },
   divider: {
@@ -450,12 +496,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
   },
   emptyText: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.textSecondary,
     marginTop: spacing.md,
   },
   emptySubtext: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.sm,
