@@ -19,8 +19,10 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 import { qrAPI } from '../../config/api';
-import { theme, colors, spacing, typography } from '../../styles/theme';
+import { colors, spacing } from '../../styles/theme';
 
 export default function QRGenerateScreen({ navigation }) {
   const [amount, setAmount] = useState('');
@@ -69,12 +71,39 @@ export default function QRGenerateScreen({ navigation }) {
     if (!qrCodeData) return;
 
     try {
+      // Request media library permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'We need access to your media library to save and share the QR code image.');
+        return;
+      }
+
+      // Create a temporary file path
+      const fileName = `qr_payment_${Date.now()}.png`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      // Download the QR code image from base64 data URL
+      const base64Data = qrCodeData.split(',')[1]; // Remove data:image/png;base64, prefix
+      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Save to media library
+      const asset = await MediaLibrary.createAssetAsync(fileUri);
+      
+      // Share the image
       await Share.share({
+        url: fileUri,
         message: `Payment Request: N$ ${amount}\nDescription: ${description || 'QR Payment Request'}\n\nScan this QR code to pay.`,
         title: 'QR Payment Request',
       });
+
+      // Clean up temporary file
+      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+
     } catch (error) {
       console.error('Share error:', error);
+      Alert.alert('Share Error', 'Failed to share QR code. Please try again.');
     }
   };
 
@@ -228,9 +257,9 @@ export default function QRGenerateScreen({ navigation }) {
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
               <Button
-                mode="outlined"
+                mode="contained"
                 onPress={handleShareQR}
-                style={styles.actionButton}
+                style={styles.shareButton}
                 theme={{
                   colors: {
                     primary: colors.primary,
@@ -238,8 +267,8 @@ export default function QRGenerateScreen({ navigation }) {
                 }}
               >
                 <View style={styles.buttonContent}>
-                  <Ionicons name="share" size={20} color={colors.primary} style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Share QR Code</Text>
+                  <Ionicons name="share" size={20} color={colors.white} style={styles.buttonIcon} />
+                  <Text style={styles.shareButtonText}>Share QR Code</Text>
                 </View>
               </Button>
 
@@ -311,13 +340,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: typography.h2.fontSize,
-    fontWeight: typography.h2.fontWeight,
+    fontSize: 24,
+    fontWeight: 'bold',
     color: colors.white,
     marginTop: spacing.sm,
   },
   headerSubtitle: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.white,
     opacity: 0.9,
     textAlign: 'center',
@@ -331,13 +360,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   cardTitle: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.sm,
   },
   cardSubtitle: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.textSecondary,
     marginBottom: spacing.lg,
   },
@@ -363,8 +392,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   qrTitle: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.lg,
   },
@@ -395,28 +424,28 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   qrCodeErrorText: {
-    fontSize: typography.h4.fontSize,
-    fontWeight: typography.h4.fontWeight,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.error,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   qrCodeErrorDetails: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
     fontStyle: 'italic',
   },
   qrCodeText: {
-    fontSize: typography.h4.fontSize,
-    fontWeight: typography.h4.fontWeight,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.primary,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
   },
   qrCodeData: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
     fontFamily: 'monospace',
@@ -435,12 +464,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   detailLabel: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.textSecondary,
     fontWeight: '500',
   },
   detailValue: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.text,
     fontWeight: '600',
   },
@@ -453,14 +482,23 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 0.48,
   },
+  shareButton: {
+    flex: 0.48,
+    backgroundColor: colors.primary,
+  },
+  shareButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '500',
+  },
   instructionsCard: {
     elevation: 2,
     borderRadius: 12,
     width: '100%',
   },
   instructionsTitle: {
-    fontSize: typography.h4.fontSize,
-    fontWeight: typography.h4.fontWeight,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.md,
   },
@@ -470,7 +508,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   instructionText: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.text,
     marginLeft: spacing.sm,
     flex: 1,
@@ -489,7 +527,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.white,
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     fontWeight: '500',
   },
 });

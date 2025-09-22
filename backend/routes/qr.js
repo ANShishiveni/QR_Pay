@@ -1,10 +1,32 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
+const crypto = require('crypto');
 const { getFirebaseServices } = require('../config/firebase');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
+
+// Generate secure QR code data with minimal exposure
+const generateSecureQRData = (paymentRequest) => {
+  // Create a secure token that contains minimal information
+  const secureData = {
+    type: 'payment_request',
+    token: paymentRequest.id, // Only include the request ID as a token
+    expiresAt: paymentRequest.expiresAt
+  };
+  
+  // Create a signature to verify data integrity
+  const signature = crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(JSON.stringify(secureData))
+    .digest('hex');
+  
+  return {
+    ...secureData,
+    signature: signature
+  };
+};
 
 // Middleware to verify JWT token
 const verifyToken = async (req, res, next) => {
@@ -53,19 +75,11 @@ router.post('/generate', verifyToken, async (req, res) => {
     // Store payment request in Firebase
     await realtimeDb.ref(`paymentRequests/${paymentRequest.id}`).set(paymentRequest);
 
-    // Create QR code data
-    const qrData = {
-      type: 'payment_request',
-      requestId: paymentRequest.id,
-      amount: paymentAmount,
-      currency: 'NAD',
-      senderName: paymentRequest.senderName,
-      description: paymentRequest.description,
-      expiresAt: expiresAt
-    };
+    // Create secure QR code data (minimal information exposure)
+    const secureQRData = generateSecureQRData(paymentRequest);
 
     // Generate QR code
-    const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(qrData), {
+    const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(secureQRData), {
       width: 300,
       margin: 2,
       color: {
@@ -114,8 +128,19 @@ router.post('/scan', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'Invalid QR code type' });
     }
 
+    // Verify the signature to ensure data integrity
+    const { signature, ...dataToVerify } = parsedData;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.JWT_SECRET)
+      .update(JSON.stringify(dataToVerify))
+      .digest('hex');
+    
+    if (signature !== expectedSignature) {
+      return res.status(400).json({ error: 'Invalid QR code signature' });
+    }
+
     // Check if payment request exists and is valid
-    const requestSnapshot = await realtimeDb.ref(`paymentRequests/${parsedData.requestId}`).once('value');
+    const requestSnapshot = await realtimeDb.ref(`paymentRequests/${parsedData.token}`).once('value');
     const paymentRequest = requestSnapshot.val();
 
     if (!paymentRequest) {

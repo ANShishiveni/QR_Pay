@@ -91,7 +91,7 @@ export default function CardsScreen({ navigation }) {
       Alert.alert('Validation Error', validation.errors.join('\n'));
       return false;
     }
-    
+
     return true;
   };
 
