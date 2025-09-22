@@ -5,6 +5,7 @@ import {
   ScrollView,
   Alert,
   Share,
+  Image,
 } from 'react-native';
 import {
   Card,
@@ -17,10 +18,11 @@ import {
   Divider,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 import { qrAPI } from '../../config/api';
-import { theme, colors, spacing, typography } from '../../styles/theme';
+import { colors, spacing } from '../../styles/theme';
 
 export default function QRGenerateScreen({ navigation }) {
   const [amount, setAmount] = useState('');
@@ -28,6 +30,7 @@ export default function QRGenerateScreen({ navigation }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [qrCodeData, setQrCodeData] = useState(null);
   const [paymentRequest, setPaymentRequest] = useState(null);
+  const [qrCodeError, setQrCodeError] = useState(null);
 
   const handleGenerateQR = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -36,6 +39,7 @@ export default function QRGenerateScreen({ navigation }) {
     }
 
     setIsGenerating(true);
+    setQrCodeError(null);
     try {
       const response = await qrAPI.generateQR({
         amount: parseFloat(amount),
@@ -53,6 +57,7 @@ export default function QRGenerateScreen({ navigation }) {
       );
     } catch (error) {
       console.error('Generate QR error:', error);
+      setQrCodeError(error.response?.data?.error || 'Failed to generate QR code');
       Alert.alert(
         'Error',
         error.response?.data?.error || 'Failed to generate QR code'
@@ -66,12 +71,39 @@ export default function QRGenerateScreen({ navigation }) {
     if (!qrCodeData) return;
 
     try {
+      // Request media library permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'We need access to your media library to save and share the QR code image.');
+        return;
+      }
+
+      // Create a temporary file path
+      const fileName = `qr_payment_${Date.now()}.png`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      // Download the QR code image from base64 data URL
+      const base64Data = qrCodeData.split(',')[1]; // Remove data:image/png;base64, prefix
+      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Save to media library
+      const asset = await MediaLibrary.createAssetAsync(fileUri);
+      
+      // Share the image
       await Share.share({
+        url: fileUri,
         message: `Payment Request: N$ ${amount}\nDescription: ${description || 'QR Payment Request'}\n\nScan this QR code to pay.`,
         title: 'QR Payment Request',
       });
+
+      // Clean up temporary file
+      await FileSystem.deleteAsync(fileUri, { idempotent: true });
+
     } catch (error) {
       console.error('Share error:', error);
+      Alert.alert('Share Error', 'Failed to share QR code. Please try again.');
     }
   };
 
@@ -80,6 +112,7 @@ export default function QRGenerateScreen({ navigation }) {
     setDescription('');
     setQrCodeData(null);
     setPaymentRequest(null);
+    setQrCodeError(null);
   };
 
   const formatExpiryTime = (expiresAt) => {
@@ -124,7 +157,7 @@ export default function QRGenerateScreen({ navigation }) {
                 keyboardType="numeric"
                 placeholder="0.00"
                 style={styles.input}
-                left={<TextInput.Icon icon="currency-usd" />}
+                left={<Ionicons name="cash" size={24} color={colors.primary} style={styles.iconButton} />}
                 theme={{
                   colors: {
                     primary: colors.primary,
@@ -173,12 +206,29 @@ export default function QRGenerateScreen({ navigation }) {
                 <Title style={styles.qrTitle}>Your Payment Request</Title>
                 
                 <View style={styles.qrCodeContainer}>
-                  <QRCode
-                    value={qrCodeData}
-                    size={250}
-                    backgroundColor={colors.white}
-                    color={colors.black}
-                  />
+                  {qrCodeError ? (
+                    <View style={styles.qrCodeErrorContainer}>
+                      <Ionicons name="alert-circle" size={60} color={colors.error} />
+                      <Text style={styles.qrCodeErrorText}>Failed to Generate QR Code</Text>
+                      <Text style={styles.qrCodeErrorDetails}>{qrCodeError}</Text>
+                    </View>
+                  ) : qrCodeData ? (
+                    <View style={styles.qrCodeImageContainer}>
+                      <Image 
+                        source={{ uri: qrCodeData }} 
+                        style={styles.qrCodeImage}
+                        resizeMode="contain"
+                      />
+                      <Text style={styles.qrCodeText}>QR Code Generated</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.qrCodePlaceholder}>
+                      <Ionicons name="qr-code" size={120} color={colors.primary} />
+                      <Text style={styles.qrCodeText}>
+                        {isGenerating ? 'Generating QR Code...' : 'QR Code will appear here'}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.paymentDetails}>
@@ -207,31 +257,35 @@ export default function QRGenerateScreen({ navigation }) {
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
               <Button
-                mode="outlined"
+                mode="contained"
                 onPress={handleShareQR}
-                style={styles.actionButton}
-                icon="share"
+                style={styles.shareButton}
                 theme={{
                   colors: {
                     primary: colors.primary,
                   },
                 }}
               >
-                Share QR Code
+                <View style={styles.buttonContent}>
+                  <Ionicons name="share" size={20} color={colors.white} style={styles.buttonIcon} />
+                  <Text style={styles.shareButtonText}>Share QR Code</Text>
+                </View>
               </Button>
 
               <Button
                 mode="contained"
                 onPress={handleReset}
                 style={styles.actionButton}
-                icon="refresh"
                 theme={{
                   colors: {
                     primary: colors.primary,
                   },
                 }}
               >
-                Generate New
+                <View style={styles.buttonContent}>
+                  <Ionicons name="refresh" size={20} color={colors.white} style={styles.buttonIcon} />
+                  <Text style={styles.buttonText}>Generate New</Text>
+                </View>
               </Button>
             </View>
 
@@ -286,13 +340,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: typography.h2.fontSize,
-    fontWeight: typography.h2.fontWeight,
+    fontSize: 24,
+    fontWeight: 'bold',
     color: colors.white,
     marginTop: spacing.sm,
   },
   headerSubtitle: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.white,
     opacity: 0.9,
     textAlign: 'center',
@@ -306,13 +360,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   cardTitle: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.sm,
   },
   cardSubtitle: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.textSecondary,
     marginBottom: spacing.lg,
   },
@@ -338,8 +392,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   qrTitle: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.lg,
   },
@@ -349,6 +403,56 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: spacing.lg,
     elevation: 2,
+    alignItems: 'center',
+  },
+  qrCodePlaceholder: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  qrCodeImageContainer: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  qrCodeImage: {
+    width: 250,
+    height: 250,
+    borderRadius: 8,
+    marginBottom: spacing.sm,
+  },
+  qrCodeErrorContainer: {
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  qrCodeErrorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.error,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  qrCodeErrorDetails: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  qrCodeText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.primary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  qrCodeData: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontFamily: 'monospace',
+    backgroundColor: colors.lightGray,
+    padding: spacing.sm,
+    borderRadius: 8,
+    marginTop: spacing.sm,
   },
   paymentDetails: {
     width: '100%',
@@ -360,12 +464,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   detailLabel: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.textSecondary,
     fontWeight: '500',
   },
   detailValue: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.text,
     fontWeight: '600',
   },
@@ -378,14 +482,23 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 0.48,
   },
+  shareButton: {
+    flex: 0.48,
+    backgroundColor: colors.primary,
+  },
+  shareButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '500',
+  },
   instructionsCard: {
     elevation: 2,
     borderRadius: 12,
     width: '100%',
   },
   instructionsTitle: {
-    fontSize: typography.h4.fontSize,
-    fontWeight: typography.h4.fontWeight,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.md,
   },
@@ -395,9 +508,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   instructionText: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.text,
     marginLeft: spacing.sm,
     flex: 1,
+  },
+  iconButton: {
+    padding: 8,
+    cursor: 'pointer',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  buttonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

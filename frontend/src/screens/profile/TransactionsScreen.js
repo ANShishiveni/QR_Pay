@@ -18,7 +18,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { userAPI } from '../../config/api';
-import { theme, colors, spacing, typography } from '../../styles/theme';
+import { theme, colors, spacing } from '../../styles/theme';
 
 export default function TransactionsScreen({ navigation }) {
   const [transactions, setTransactions] = useState([]);
@@ -144,9 +144,9 @@ export default function TransactionsScreen({ navigation }) {
               {formatAmount(item.amount, item.type)}
             </Text>
             <Chip
-              mode="outlined"
+              mode="flat"
               textStyle={styles.statusChipText}
-              style={[styles.statusChip, { borderColor: getStatusColor(item.status) }]}
+              style={[styles.statusChip, { backgroundColor: getStatusColor(item.status) }]}
             >
               {item.status}
             </Chip>
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: spacing.md,
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.textSecondary,
   },
   header: {
@@ -291,13 +291,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: typography.h2.fontSize,
-    fontWeight: typography.h2.fontWeight,
+    fontSize: 24,
+    fontWeight: 'bold',
     color: colors.white,
     marginTop: spacing.sm,
   },
   headerSubtitle: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.white,
     opacity: 0.9,
     textAlign: 'center',
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   filterChipText: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
   },
   listContainer: {
     paddingBottom: spacing.xl,
@@ -349,17 +349,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   transactionDescription: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
   },
   transactionPerson: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
   transactionDate: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
@@ -367,15 +367,23 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   amountText: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: spacing.xs,
   },
   statusChip: {
-    height: 24,
+    height: 28,
+    minWidth: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statusChipText: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.white,
+    textTransform: 'capitalize',
+    textAlign: 'center',
+    lineHeight: 12,
   },
   bankInfo: {
     marginTop: spacing.md,
@@ -384,12 +392,12 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   bankLabel: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
     color: colors.textSecondary,
     fontWeight: '500',
   },
   bankText: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
     color: colors.text,
     marginTop: spacing.xs,
   },
@@ -403,13 +411,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
   },
   emptyTitle: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.text,
     marginTop: spacing.md,
   },
   emptySubtitle: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.sm,

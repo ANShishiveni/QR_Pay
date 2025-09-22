@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider } from 'react-native-paper';
-import FlashMessage from 'react-native-flash-message';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 // Import screens
 import LoginScreen from './src/screens/auth/LoginScreen';
@@ -17,6 +17,7 @@ import QRScanScreen from './src/screens/qr/QRScanScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import CardsScreen from './src/screens/profile/CardsScreen';
 import TransactionsScreen from './src/screens/profile/TransactionsScreen';
+import SettingsScreen from './src/screens/profile/SettingsScreen';
 import PaymentConfirmScreen from './src/screens/payment/PaymentConfirmScreen';
 
 // Import theme
@@ -24,6 +25,16 @@ import { theme } from './src/styles/theme';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Loading Screen
+function LoadingScreen() {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={styles.loadingText}>Loading NamPay...</Text>
+    </View>
+  );
+}
 
 // Main Tab Navigator
 function MainTabs() {
@@ -55,56 +66,57 @@ function MainTabs() {
   );
 }
 
-export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      const userData = await AsyncStorage.getItem('userData');
-      
-      if (token && userData) {
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+function AppContent() {
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    // You can add a loading screen here
-    return null;
+    return <LoadingScreen />;
   }
 
   return (
+    <NavigationContainer>
+      <StatusBar style="auto" />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {isAuthenticated ? (
+          <>
+            <Stack.Screen name="MainTabs" component={MainTabs} />
+            <Stack.Screen name="QRScan" component={QRScanScreen} />
+            <Stack.Screen name="PaymentConfirm" component={PaymentConfirmScreen} />
+            <Stack.Screen name="Cards" component={CardsScreen} />
+            <Stack.Screen name="Transactions" component={TransactionsScreen} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
     <PaperProvider theme={theme}>
-      <NavigationContainer>
-        <StatusBar style="auto" />
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {isAuthenticated ? (
-            <>
-              <Stack.Screen name="MainTabs" component={MainTabs} />
-              <Stack.Screen name="QRScan" component={QRScanScreen} />
-              <Stack.Screen name="PaymentConfirm" component={PaymentConfirmScreen} />
-              <Stack.Screen name="Cards" component={CardsScreen} />
-              <Stack.Screen name="Transactions" component={TransactionsScreen} />
-            </>
-          ) : (
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Register" component={RegisterScreen} />
-            </>
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
-      <FlashMessage position="top" />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </PaperProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 18,
+    color: '#333333',
+  },
+});

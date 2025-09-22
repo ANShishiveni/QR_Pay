@@ -1,8 +1,26 @@
 const express = require('express');
-const { realtimeDb } = require('../config/firebase');
+const multer = require('multer');
+const bcrypt = require('bcryptjs');
+const { getFirebaseServices } = require('../config/firebase');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
+
+// Configure multer for photo uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
 
 // Middleware to verify JWT token
 const verifyToken = async (req, res, next) => {
@@ -24,6 +42,7 @@ const verifyToken = async (req, res, next) => {
 // Get user profile
 router.get('/profile', verifyToken, async (req, res) => {
   try {
+    const { realtimeDb } = getFirebaseServices();
     const userSnapshot = await realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`).once('value');
     const userData = userSnapshot.val();
 
@@ -48,6 +67,7 @@ router.get('/profile', verifyToken, async (req, res) => {
 router.put('/profile', verifyToken, async (req, res) => {
   try {
     const { firstName, lastName, phoneNumber } = req.body;
+    const { realtimeDb } = getFirebaseServices();
     const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
 
     const updates = {};
@@ -72,6 +92,7 @@ router.put('/profile', verifyToken, async (req, res) => {
 // Get user's linked cards
 router.get('/cards', verifyToken, async (req, res) => {
   try {
+    const { realtimeDb } = getFirebaseServices();
     const userSnapshot = await realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`).once('value');
     const userData = userSnapshot.val();
 
@@ -104,6 +125,7 @@ router.get('/transactions', verifyToken, async (req, res) => {
   try {
     const { limit = 20, offset = 0 } = req.query;
     
+    const { realtimeDb } = getFirebaseServices();
     const transactionsRef = realtimeDb.ref('transactions')
       .orderByChild('userId')
       .equalTo(req.user.uid)
@@ -129,6 +151,7 @@ router.get('/transactions', verifyToken, async (req, res) => {
 // Get user statistics
 router.get('/stats', verifyToken, async (req, res) => {
   try {
+    const { realtimeDb } = getFirebaseServices();
     const transactionsRef = realtimeDb.ref('transactions')
       .orderByChild('userId')
       .equalTo(req.user.uid);
@@ -156,6 +179,86 @@ router.get('/stats', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Get stats error:', error);
     res.status(500).json({ error: 'Failed to get stats', details: error.message });
+  }
+});
+
+// Upload user photo
+router.post('/photo', verifyToken, upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No photo uploaded' });
+    }
+
+    const { realtimeDb } = getFirebaseServices();
+    
+    // For development, we'll use a simple base64 approach
+    // Convert the image buffer to base64
+    const base64Image = req.file.buffer.toString('base64');
+    const dataUrl = `data:${req.file.mimetype};base64,${base64Image}`;
+    
+    // Update user profile with base64 photo data
+    const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
+    await userRef.update({
+      photoUrl: dataUrl,
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({
+      message: 'Photo uploaded successfully',
+      photoUrl: dataUrl
+    });
+
+  } catch (error) {
+    console.error('Photo upload error:', error);
+    res.status(500).json({ error: 'Failed to upload photo', details: error.message });
+  }
+});
+
+// Change user password
+router.put('/password', verifyToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    }
+
+    const { realtimeDb } = getFirebaseServices();
+    const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
+    const userSnapshot = await userRef.once('value');
+    const userData = userSnapshot.val();
+
+    if (!userData) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, userData.hashedPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password
+    await userRef.update({
+      hashedPassword: hashedNewPassword,
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('Password change error:', error);
+    res.status(500).json({ error: 'Failed to change password', details: error.message });
   }
 });
 

@@ -3,38 +3,76 @@ const admin = require('firebase-admin');
 // Initialize Firebase Admin SDK
 const initializeFirebase = () => {
   if (!admin.apps.length) {
+    // Check if environment variables are loaded
+    if (!process.env.FIREBASE_PROJECT_ID) {
+      console.error('❌ Firebase environment variables not loaded. Make sure .env file exists and is properly configured.');
+      throw new Error('Firebase environment variables not found');
+    }
+
+    // Fix private key formatting
+    let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    if (privateKey) {
+      console.log('🔍 Original private key length:', privateKey.length);
+      console.log('🔍 First 50 chars:', privateKey.substring(0, 50));
+      
+      // Replace literal \n with actual newlines
+      privateKey = privateKey.replace(/\\n/g, '\n');
+      // Remove any extra quotes if present
+      privateKey = privateKey.replace(/^["']|["']$/g, '');
+      
+      console.log('🔍 After formatting length:', privateKey.length);
+      console.log('🔍 First 50 chars after formatting:', privateKey.substring(0, 50));
+      console.log('🔑 Private key formatted successfully');
+    } else {
+      console.error('❌ FIREBASE_PRIVATE_KEY not found in environment variables');
+      throw new Error('FIREBASE_PRIVATE_KEY not found');
+    }
+
     const serviceAccount = {
       type: "service_account",
-      project_id: "qr-money-transfer",
-      private_key_id: "2cb618a2ad2460813f878a14f6614d97141914aa",
-      private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCwjLRgVX/GnT2g\nTYf4Okr8qTrXmz9sgaXUzPHmUFJDXV/Z2Iisl16HU4y76KKkwt7Xfj76iRgB2Z9g\nhifFMMmL2bEKiEvQPsRfC5u4QsD/kooz455rEZP8ynX2OaUJvsV5Cb3c8BOIHIfA\n+n6ao/Wmo6E+ESCtkNXJ0r/h/sqUuUJ+a8nGgaLHG1rPZrS+HQxwS91fB+ZMlweG\nHJqRhpWd4ML5EJp1sjTUqI8lr6WSjzq0WmMfCdyXzWSLvkNC9pKYS4zwkv3WH8cE\nIQDLsT3dD8ecc3Ioru9ipYGg1Cd58YySUjqZc9XBar3J8LDu8mwMwNsulits4UFo\nlmvLGpUPAgMBAAECggEAEHBkPJ1uyA6iILK3bhdMyNlKdQMBVS1+mcxPhejaur0P\nYhh1zs71aq0OlfyjuwBjgYtBeqXt9Kt6hKFZQ1Th9MIGEyX9G9yMVRFJTvn1levj\nhHtgUos7eAwIudmaPXMPA3szEPHQem8K+57CJSIOi0AB5pFFCq70HoEfhCqWWwym\nfhJs4Bs3d0IzlNqbCBM4hmF4wkLI4SosY4Mc5qjK0pNz55L+5c53UT/FvtbvPiAP\nkxyZormGu0kBQCKqT0UF6hywNIVJ0VDDElOQxTuMjAfhU2iDSevQheQWAloNrq05\nga8+nBz0d96odoi9//QUioeq9tpeHOKLBLgN9PN4OQKBgQDvesj/mUYMH97O4dYf\nR8ETEioAb8ScCnjjSQOP48GqLyvgtAdfXILNVhykopJhutYOCsed/Vn6qt2c9rQT\n7bp9NlgBJKLRWI7CS8zy+EvlFLoclYx3LIlZ55PlHoiTuJ/xLzASQONrMvRfohBY\nP+e6oML99eiBklycbIGo6p4gKwKBgQC8upML2ZQKHGRhAnZs0zbvGzv6kDh9HoNR\ni42tNQhbXuS3S+uUXWHsGZSO6DdQMBLg7uzdIMV0SX3xkcVog97VFG2jfYLAPsFY\nC5pGtL6AlXjO5afe35oJI3L/iYzWeAUfUEB515GNcHKwqmfh2U+rAXR0DlJdfesb\ndTDo+3iIrQKBgA/ZD04i5YjN3x/PwCzHwdYyQIdQ3jD5XHCmF09BYkKR5pRzNX2x\nEJLoHPMkMw22oI3DVtx0tKyq/Al0JgyfkdTRcNd6hi/WbXQcMg7uMY+SZJKZrvcA\nAoLpmVbzQ1SLRkJevg6nLqWcdKGThwNgD0TBeMX3rRBOEETlxVrZU+eLAoGBALwZ\n3MtXvUPijm1dzfii/0KLS1ltes/BpLKWu8thawXea2kBIziJZjqyOC3C5rZmY7qK\nh8vRiNthEES/vBhyLpsDNE9ZngLLyVpenhJQvPdf73+iTUKeXUYPtrQFm3/y2Mt\nUkXeA/ULmVPZU5Z3R/8xgQbW62LBSJ3iTLA5SyY1AoGAYc+v8J8l/+O5+RLwGNDD\nvyzWO+KLNtb/pvYH5Puf7GoOC25OeyasEz5KjmxE6oDWDuJ745KdIaJCycAuwBwf\n+a4zjhWE086IGTwnl35rjwzdR2NFZ60WT6QnThO6SjUKjAYnKkkHrGeCIqmE9cgo\nWiTClWc4LbRQPK8A97E1nZg=\n-----END PRIVATE KEY-----\n",
-      client_email: "firebase-adminsdk-fbsvc@qr-money-transfer.iam.gserviceaccount.com",
-      client_id: "113446707674615372792",
+      project_id: process.env.FIREBASE_PROJECT_ID,
+      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+      private_key: privateKey,
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      client_id: process.env.FIREBASE_CLIENT_ID,
       auth_uri: "https://accounts.google.com/o/oauth2/auth",
       token_uri: "https://oauth2.googleapis.com/token",
       auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-      client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40qr-money-transfer.iam.gserviceaccount.com"
+      client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${process.env.FIREBASE_CLIENT_EMAIL}`
     };
 
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      databaseURL: `https://qr-money-transfer-default-rtdb.firebaseio.com/`
-    });
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com/`
+      });
 
-    console.log('🔥 Firebase Admin initialized successfully');
+      console.log('🔥 Firebase Admin initialized successfully');
+    } catch (error) {
+      console.error('❌ Firebase initialization failed:', error.message);
+      throw error;
+    }
   }
   
   return admin;
 };
 
-const db = admin.firestore();
-const auth = admin.auth();
-const realtimeDb = admin.database();
+// Initialize Firebase services after app is initialized
+const getFirebaseServices = () => {
+  if (!admin.apps.length) {
+    throw new Error('Firebase app not initialized. Call initializeFirebase() first.');
+  }
+  
+  return {
+    db: admin.firestore(),
+    auth: admin.auth(),
+    realtimeDb: admin.database(),
+    storage: admin.storage()
+  };
+};
 
 module.exports = {
   admin,
-  db,
-  auth,
-  realtimeDb,
-  initializeFirebase
+  initializeFirebase,
+  getFirebaseServices
 };

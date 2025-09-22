@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import {
   Card,
@@ -18,28 +19,44 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { userAPI } from '../../config/api';
-import { theme, colors, spacing, typography } from '../../styles/theme';
+import { theme, colors, spacing } from '../../styles/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     loadUserData();
     loadStats();
   }, []);
 
+  // Refresh profile data when screen comes into focus (e.g., returning from Settings)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, [])
+  );
+
   const loadUserData = async () => {
     try {
-      const storedUserData = await AsyncStorage.getItem('userData');
-      if (storedUserData) {
-        setUserData(JSON.parse(storedUserData));
+      if (user) {
+        // Load fresh profile data from API to get photo URL
+        const response = await userAPI.getProfile();
+        console.log('📸 Profile data loaded:', response.data.user);
+        console.log('📸 Photo URL:', response.data.user.photoUrl);
+        setUserData(response.data.user);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+      // Fallback to context user data
+      if (user) {
+        setUserData(user);
+      }
     }
   };
 
@@ -74,20 +91,24 @@ export default function ProfileScreen({ navigation }) {
 
   const performLogout = async () => {
     try {
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('userData');
-      
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
+      await logout();
+      console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
 
   const formatAmount = (amount) => {
-    return `N$ ${parseFloat(amount).toFixed(2)}`;
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount)) return 'N$ 0.00';
+    
+    // Format with commas for thousands separator
+    const formatted = numAmount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    return `N$ ${formatted}`;
   };
 
   if (isLoading) {
@@ -107,11 +128,26 @@ export default function ProfileScreen({ navigation }) {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Avatar.Text
-            size={80}
-            label={`${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`}
-            style={styles.avatar}
-          />
+          {userData?.photoUrl ? (
+            <>
+              {console.log('🖼️ Rendering photo with URL:', userData.photoUrl)}
+              <Image 
+                source={{ uri: userData.photoUrl }} 
+                style={styles.profilePhoto}
+                onError={(error) => console.log('❌ Image load error:', error)}
+                onLoad={() => console.log('✅ Image loaded successfully')}
+              />
+            </>
+          ) : (
+            <>
+              {console.log('👤 No photo URL, showing avatar with initials:', `${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`)}
+              <Avatar.Text
+                size={80}
+                label={`${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`}
+                style={styles.avatar}
+              />
+            </>
+          )}
           <Title style={styles.userName}>
             {userData?.firstName} {userData?.lastName}
           </Title>
@@ -152,8 +188,8 @@ export default function ProfileScreen({ navigation }) {
             <List.Item
               title="My Cards"
               description="Manage your linked payment cards"
-              left={(props) => <List.Icon {...props} icon="credit-card" color={colors.primary} />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              left={(props) => <Ionicons name="card" size={24} color={colors.primary} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('Cards')}
               style={styles.menuItem}
             />
@@ -161,26 +197,26 @@ export default function ProfileScreen({ navigation }) {
             <List.Item
               title="Transaction History"
               description="View all your payment history"
-              left={(props) => <List.Icon {...props} icon="history" color={colors.primary} />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              left={(props) => <Ionicons name="time" size={24} color={colors.primary} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('Transactions')}
               style={styles.menuItem}
             />
             <Divider />
             <List.Item
-              title="Security Settings"
-              description="Manage your account security"
-              left={(props) => <List.Icon {...props} icon="shield-account" color={colors.primary} />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => Alert.alert('Coming Soon', 'Security settings will be available in a future update.')}
+              title="Settings"
+              description="Manage your profile photo and password"
+              left={(props) => <Ionicons name="settings" size={24} color={colors.primary} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+              onPress={() => navigation.navigate('Settings')}
               style={styles.menuItem}
             />
             <Divider />
             <List.Item
               title="Help & Support"
               description="Get help and contact support"
-              left={(props) => <List.Icon {...props} icon="help-circle" color={colors.primary} />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              left={(props) => <Ionicons name="help-circle" size={24} color={colors.primary} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => Alert.alert('Help & Support', 'For support, please contact us at support@qrmoneytransfer.com')}
               style={styles.menuItem}
             />
@@ -211,7 +247,6 @@ export default function ProfileScreen({ navigation }) {
           mode="outlined"
           onPress={handleLogout}
           style={styles.logoutButton}
-          icon="logout"
           textColor={colors.error}
           buttonColor={colors.white}
           theme={{
@@ -220,7 +255,10 @@ export default function ProfileScreen({ navigation }) {
             },
           }}
         >
-          Logout
+          <View style={styles.buttonContent}>
+            <Ionicons name="log-out" size={20} color={colors.error} style={styles.buttonIcon} />
+            <Text style={[styles.buttonText, { color: colors.error }]}>Logout</Text>
+          </View>
         </Button>
       </View>
     </ScrollView>
@@ -240,7 +278,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: spacing.md,
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.textSecondary,
   },
   header: {
@@ -255,20 +293,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     marginBottom: spacing.md,
   },
+  profilePhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.white,
+    marginBottom: spacing.md,
+  },
   userName: {
-    fontSize: typography.h2.fontSize,
-    fontWeight: typography.h2.fontWeight,
+    fontSize: 24,
+    fontWeight: 'bold',
     color: colors.white,
     marginBottom: spacing.xs,
   },
   userEmail: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.white,
     opacity: 0.9,
     marginBottom: spacing.xs,
   },
   userPhone: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.white,
     opacity: 0.8,
   },
@@ -281,28 +326,36 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   cardTitle: {
-    fontSize: typography.h4.fontSize,
-    fontWeight: typography.h4.fontWeight,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.md,
   },
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    paddingHorizontal: spacing.sm,
   },
   statItem: {
     alignItems: 'center',
+    flex: 1,
+    minWidth: 0, // Allow flex shrinking
   },
   statValue: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.primary,
+    textAlign: 'center',
+    flexWrap: 'wrap',
+    maxWidth: '100%',
   },
   statLabel: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 11,
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
+    flexWrap: 'wrap',
+    maxWidth: '100%',
   },
   menuCard: {
     elevation: 4,
@@ -318,9 +371,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   infoText: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.textSecondary,
-    lineHeight: typography.body2.lineHeight,
+    lineHeight: 20,
     marginBottom: spacing.md,
   },
   versionInfo: {
@@ -328,12 +381,24 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   versionText: {
-    fontSize: typography.caption.fontSize,
+    fontSize: 12,
     color: colors.textSecondary,
     marginBottom: spacing.xs,
   },
   logoutButton: {
     marginTop: spacing.lg,
     borderColor: colors.error,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

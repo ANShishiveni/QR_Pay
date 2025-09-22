@@ -1,10 +1,32 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
-const { realtimeDb } = require('../config/firebase');
+const crypto = require('crypto');
+const { getFirebaseServices } = require('../config/firebase');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
+
+// Generate secure QR code data with minimal exposure
+const generateSecureQRData = (paymentRequest) => {
+  // Create a secure token that contains minimal information
+  const secureData = {
+    type: 'payment_request',
+    token: paymentRequest.id, // Only include the request ID as a token
+    expiresAt: paymentRequest.expiresAt
+  };
+  
+  // Create a signature to verify data integrity
+  const signature = crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(JSON.stringify(secureData))
+    .digest('hex');
+  
+  return {
+    ...secureData,
+    signature: signature
+  };
+};
 
 // Middleware to verify JWT token
 const verifyToken = async (req, res, next) => {
@@ -27,6 +49,7 @@ const verifyToken = async (req, res, next) => {
 router.post('/generate', verifyToken, async (req, res) => {
   try {
     const { amount, description, expiresIn = 300 } = req.body; // expiresIn in seconds, default 5 minutes
+    const { realtimeDb } = getFirebaseServices();
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Valid amount is required' });
@@ -52,19 +75,11 @@ router.post('/generate', verifyToken, async (req, res) => {
     // Store payment request in Firebase
     await realtimeDb.ref(`paymentRequests/${paymentRequest.id}`).set(paymentRequest);
 
-    // Create QR code data
-    const qrData = {
-      type: 'payment_request',
-      requestId: paymentRequest.id,
-      amount: paymentAmount,
-      currency: 'NAD',
-      senderName: paymentRequest.senderName,
-      description: paymentRequest.description,
-      expiresAt: expiresAt
-    };
+    // Create secure QR code data (minimal information exposure)
+    const secureQRData = generateSecureQRData(paymentRequest);
 
     // Generate QR code
-    const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(qrData), {
+    const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(secureQRData), {
       width: 300,
       margin: 2,
       color: {
@@ -96,6 +111,7 @@ router.post('/generate', verifyToken, async (req, res) => {
 router.post('/scan', verifyToken, async (req, res) => {
   try {
     const { qrData } = req.body;
+    const { realtimeDb } = getFirebaseServices();
 
     if (!qrData) {
       return res.status(400).json({ error: 'QR code data is required' });
@@ -112,8 +128,19 @@ router.post('/scan', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'Invalid QR code type' });
     }
 
+    // Verify the signature to ensure data integrity
+    const { signature, ...dataToVerify } = parsedData;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.JWT_SECRET)
+      .update(JSON.stringify(dataToVerify))
+      .digest('hex');
+    
+    if (signature !== expectedSignature) {
+      return res.status(400).json({ error: 'Invalid QR code signature' });
+    }
+
     // Check if payment request exists and is valid
-    const requestSnapshot = await realtimeDb.ref(`paymentRequests/${parsedData.requestId}`).once('value');
+    const requestSnapshot = await realtimeDb.ref(`paymentRequests/${parsedData.token}`).once('value');
     const paymentRequest = requestSnapshot.val();
 
     if (!paymentRequest) {
@@ -175,6 +202,7 @@ router.post('/scan', verifyToken, async (req, res) => {
 router.post('/confirm-payment', verifyToken, async (req, res) => {
   try {
     const { requestId, receiverCardId } = req.body;
+    const { realtimeDb } = getFirebaseServices();
 
     if (!requestId || !receiverCardId) {
       return res.status(400).json({ error: 'Request ID and receiver card ID are required' });
@@ -227,10 +255,11 @@ router.post('/confirm-payment', verifyToken, async (req, res) => {
     const senderCardData = senderCards[senderDefaultCardId];
 
     // Simulate payment processing
+    // The receiver is paying the sender, so money flows from receiver to sender
     const { simulateCrossBankTransfer } = require('../config/stripe');
     const transferResult = await simulateCrossBankTransfer(
-      { number: receiverCardData.paymentMethodId },
-      { number: senderCardData.paymentMethodId },
+      { number: receiverCardData.paymentMethodId }, // Receiver's card (money source)
+      { number: senderCardData.paymentMethodId },    // Sender's card (money destination)
       paymentRequest.amount
     );
 
@@ -250,7 +279,7 @@ router.post('/confirm-payment', verifyToken, async (req, res) => {
     const transactionId = uuidv4();
     const timestamp = new Date().toISOString();
 
-    // Receiver transaction (money going out)
+    // Receiver transaction (money going out - paying the sender)
     const receiverTransaction = {
       id: transactionId,
       userId: req.user.uid,
@@ -266,7 +295,7 @@ router.post('/confirm-payment', verifyToken, async (req, res) => {
       receiverBank: transferResult.receiverBank
     };
 
-    // Sender transaction (money coming in)
+    // Sender transaction (money coming in - receiving from receiver)
     const senderTransaction = {
       id: transactionId,
       userId: paymentRequest.senderId,
@@ -311,6 +340,7 @@ router.post('/confirm-payment', verifyToken, async (req, res) => {
 router.get('/requests', verifyToken, async (req, res) => {
   try {
     const { status = 'pending' } = req.query;
+    const { realtimeDb } = getFirebaseServices();
     
     const requestsRef = realtimeDb.ref('paymentRequests')
       .orderByChild('senderId')

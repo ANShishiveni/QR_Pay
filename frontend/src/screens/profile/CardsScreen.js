@@ -20,6 +20,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { paymentAPI } from '../../config/api';
+import { 
+  validateCard, 
+  formatCardNumber, 
+  getMaxCardNumberLength,
+  getCardType 
+} from '../../utils/cardValidation';
 import { theme, colors, spacing, typography } from '../../styles/theme';
 
 export default function CardsScreen({ navigation }) {
@@ -56,7 +62,7 @@ export default function CardsScreen({ navigation }) {
 
     setIsAddingCard(true);
     try {
-      await paymentAPI.linkCard(newCard);
+      await paymentAPI.addCard(newCard);
       setShowAddCardModal(false);
       setNewCard({
         cardNumber: '',
@@ -79,24 +85,47 @@ export default function CardsScreen({ navigation }) {
   };
 
   const validateCardForm = () => {
-    const { cardNumber, expMonth, expYear, cvc, cardholderName } = newCard;
-
-    if (!cardNumber || !expMonth || !expYear || !cvc || !cardholderName) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return false;
-    }
-
-    if (cardNumber.length < 16) {
-      Alert.alert('Error', 'Please enter a valid card number');
-      return false;
-    }
-
-    if (cvc.length < 3) {
-      Alert.alert('Error', 'Please enter a valid CVC');
+    const validation = validateCard(newCard);
+    
+    if (!validation.isValid) {
+      Alert.alert('Validation Error', validation.errors.join('\n'));
       return false;
     }
 
     return true;
+  };
+
+  const handleCardNumberChange = (value) => {
+    // Remove all non-numeric characters
+    const cleanValue = value.replace(/\D/g, '');
+    
+    // Get maximum allowed length based on current input
+    const maxLength = getMaxCardNumberLength(cleanValue);
+    
+    // Limit input to maximum allowed length
+    if (cleanValue.length <= maxLength) {
+      // Format the card number with spaces
+      const formatted = formatCardNumber(cleanValue);
+      setNewCard({ ...newCard, cardNumber: formatted });
+    }
+  };
+
+  const handleCVCChange = (value) => {
+    // Remove all non-numeric characters and limit to 4 digits
+    const cleanValue = value.replace(/\D/g, '').slice(0, 4);
+    setNewCard({ ...newCard, cvc: cleanValue });
+  };
+
+  const handleExpiryMonthChange = (value) => {
+    // Remove all non-numeric characters and limit to 2 digits
+    const cleanValue = value.replace(/\D/g, '').slice(0, 2);
+    setNewCard({ ...newCard, expMonth: cleanValue });
+  };
+
+  const handleExpiryYearChange = (value) => {
+    // Remove all non-numeric characters and limit to 4 digits
+    const cleanValue = value.replace(/\D/g, '').slice(0, 4);
+    setNewCard({ ...newCard, expYear: cleanValue });
   };
 
   const handleSetDefault = async (cardId) => {
@@ -142,11 +171,13 @@ export default function CardsScreen({ navigation }) {
   const getCardIcon = (brand) => {
     switch (brand.toLowerCase()) {
       case 'visa':
-        return 'credit-card';
+        return 'card';
       case 'mastercard':
-        return 'credit-card';
+        return 'card';
+      case 'amex':
+        return 'card';
       default:
-        return 'credit-card-outline';
+        return 'card-outline';
     }
   };
 
@@ -314,11 +345,12 @@ export default function CardsScreen({ navigation }) {
             <TextInput
               label="Card Number"
               value={newCard.cardNumber}
-              onChangeText={(value) => setNewCard({ ...newCard, cardNumber: value })}
+              onChangeText={handleCardNumberChange}
               mode="outlined"
               keyboardType="numeric"
               placeholder="1234 5678 9012 3456"
               style={styles.modalInput}
+              maxLength={23} // Maximum formatted length (19 digits + 4 spaces)
               theme={{
                 colors: {
                   primary: colors.primary,
@@ -330,11 +362,12 @@ export default function CardsScreen({ navigation }) {
               <TextInput
                 label="Month"
                 value={newCard.expMonth}
-                onChangeText={(value) => setNewCard({ ...newCard, expMonth: value })}
+                onChangeText={handleExpiryMonthChange}
                 mode="outlined"
                 keyboardType="numeric"
                 placeholder="MM"
                 style={[styles.modalInput, styles.halfInput]}
+                maxLength={2}
                 theme={{
                   colors: {
                     primary: colors.primary,
@@ -344,11 +377,12 @@ export default function CardsScreen({ navigation }) {
               <TextInput
                 label="Year"
                 value={newCard.expYear}
-                onChangeText={(value) => setNewCard({ ...newCard, expYear: value })}
+                onChangeText={handleExpiryYearChange}
                 mode="outlined"
                 keyboardType="numeric"
                 placeholder="YYYY"
                 style={[styles.modalInput, styles.halfInput]}
+                maxLength={4}
                 theme={{
                   colors: {
                     primary: colors.primary,
@@ -360,11 +394,12 @@ export default function CardsScreen({ navigation }) {
             <TextInput
               label="CVC"
               value={newCard.cvc}
-              onChangeText={(value) => setNewCard({ ...newCard, cvc: value })}
+              onChangeText={handleCVCChange}
               mode="outlined"
               keyboardType="numeric"
               placeholder="123"
               style={styles.modalInput}
+              maxLength={4}
               theme={{
                 colors: {
                   primary: colors.primary,

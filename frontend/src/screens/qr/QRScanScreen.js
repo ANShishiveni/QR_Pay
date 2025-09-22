@@ -14,29 +14,19 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Camera } from 'expo-camera';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { qrAPI } from '../../config/api';
-import { theme, colors, spacing, typography } from '../../styles/theme';
+import { colors, spacing } from '../../styles/theme';
 
 const { width, height } = Dimensions.get('window');
 
 export default function QRScanScreen({ navigation }) {
-  const [hasPermission, setHasPermission] = useState(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentRequest, setPaymentRequest] = useState(null);
   const [receiverCard, setReceiverCard] = useState(null);
-
-  useEffect(() => {
-    getCameraPermissions();
-  }, []);
-
-  const getCameraPermissions = async () => {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    setHasPermission(status === 'granted');
-  };
 
   const handleBarCodeScanned = async ({ type, data }) => {
     if (scanned || isProcessing) return;
@@ -84,7 +74,7 @@ export default function QRScanScreen({ navigation }) {
     setReceiverCard(null);
   };
 
-  if (hasPermission === null) {
+  if (!permission) {
     return (
       <View style={styles.permissionContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -93,7 +83,7 @@ export default function QRScanScreen({ navigation }) {
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
         <Ionicons name="camera-off" size={64} color={colors.gray} />
@@ -103,7 +93,7 @@ export default function QRScanScreen({ navigation }) {
         </Paragraph>
         <Button
           mode="contained"
-          onPress={getCameraPermissions}
+          onPress={requestPermission}
           style={styles.permissionButton}
           theme={{
             colors: {
@@ -124,6 +114,18 @@ export default function QRScanScreen({ navigation }) {
         colors={[colors.primary, colors.primaryDark]}
         style={styles.header}
       >
+        <View style={styles.headerTop}>
+          <Button
+            mode="text"
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            textColor={colors.white}
+            icon="arrow-left"
+            labelStyle={styles.backButtonLabel}
+          >
+            Back
+          </Button>
+        </View>
         <View style={styles.headerContent}>
           <Ionicons name="scan" size={32} color={colors.white} />
           <Title style={styles.headerTitle}>Scan QR Code</Title>
@@ -135,19 +137,22 @@ export default function QRScanScreen({ navigation }) {
 
       {/* Camera View */}
       <View style={styles.cameraContainer}>
-        <BarCodeScanner
-          onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+        <CameraView
           style={styles.camera}
-          barCodeTypes={[BarCodeScanner.Constants.BarCodeType.qr]}
+          facing="back"
+          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ["qr"],
+          }}
         />
 
         {/* Overlay */}
         <View style={styles.overlay}>
           <View style={styles.scanArea}>
-            <View style={styles.corner} style={[styles.corner, styles.topLeft]} />
-            <View style={styles.corner} style={[styles.corner, styles.topRight]} />
-            <View style={styles.corner} style={[styles.corner, styles.bottomLeft]} />
-            <View style={styles.corner} style={[styles.corner, styles.bottomRight]} />
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
           </View>
         </View>
 
@@ -186,26 +191,12 @@ export default function QRScanScreen({ navigation }) {
       </Card>
 
       {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <Button
-          mode="outlined"
-          onPress={() => navigation.goBack()}
-          style={styles.actionButton}
-          icon="arrow-left"
-          theme={{
-            colors: {
-              primary: colors.primary,
-            },
-          }}
-        >
-          Back
-        </Button>
-
-        {scanned && (
+      {scanned && (
+        <View style={styles.actionButtons}>
           <Button
             mode="contained"
             onPress={resetScan}
-            style={styles.actionButton}
+            style={styles.scanAgainButton}
             icon="refresh"
             theme={{
               colors: {
@@ -215,8 +206,8 @@ export default function QRScanScreen({ navigation }) {
           >
             Scan Again
           </Button>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -234,20 +225,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   permissionText: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.textSecondary,
     marginTop: spacing.md,
     textAlign: 'center',
   },
   permissionTitle: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
+    fontSize: 20,
+    fontWeight: '600',
     color: colors.text,
     marginTop: spacing.lg,
     textAlign: 'center',
   },
   permissionSubtitle: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.sm,
@@ -261,17 +252,29 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+  },
+  backButtonLabel: {
+    color: colors.white,
+    fontSize: 16,
+  },
   headerContent: {
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: typography.h2.fontSize,
-    fontWeight: typography.h2.fontWeight,
+    fontSize: 24,
+    fontWeight: 'bold',
     color: colors.white,
     marginTop: spacing.sm,
   },
   headerSubtitle: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.white,
     opacity: 0.9,
     textAlign: 'center',
@@ -340,7 +343,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   processingText: {
-    fontSize: typography.body1.fontSize,
+    fontSize: 16,
     color: colors.white,
     marginTop: spacing.md,
   },
@@ -350,8 +353,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   instructionsTitle: {
-    fontSize: typography.h4.fontSize,
-    fontWeight: typography.h4.fontWeight,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.md,
   },
@@ -361,18 +364,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   instructionText: {
-    fontSize: typography.body2.fontSize,
+    fontSize: 14,
     color: colors.text,
     marginLeft: spacing.sm,
     flex: 1,
   },
   actionButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     padding: spacing.lg,
     paddingTop: 0,
   },
-  actionButton: {
-    flex: 0.48,
+  scanAgainButton: {
+    flex: 0.6,
   },
 });

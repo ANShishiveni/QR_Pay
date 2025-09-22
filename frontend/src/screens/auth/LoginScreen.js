@@ -17,15 +17,17 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { authAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -35,24 +37,40 @@ export default function LoginScreen({ navigation }) {
 
     setIsLoading(true);
     try {
+      console.log('🎯 Starting login with email:', email);
       const response = await authAPI.login({ email, password });
+      console.log('✅ Login response:', response.data);
       const { token, user } = response.data;
 
-      // Store auth data
-      await AsyncStorage.setItem('authToken', token);
-      await AsyncStorage.setItem('userData', JSON.stringify(user));
+      // Use AuthContext to handle login
+      await login(token, user);
+      console.log('🔐 Auth data stored successfully');
 
-      // Navigate to main app
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      });
+      // Show success message
+      console.log('🎉 Login successful! Navigating to home...');
+      
+      if (Platform.OS === 'web') {
+        alert('Login Successful! Welcome back!');
+      }
     } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert(
-        'Login Failed',
-        error.response?.data?.error || 'An error occurred during login'
-      );
+      console.error('❌ Login error:', error);
+      console.error('❌ Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack
+      });
+      const errorMessage = error.response?.data?.error || 'An error occurred during login';
+      console.error('❌ Login failed:', errorMessage);
+      
+      if (Platform.OS === 'web') {
+        alert(`Login Failed: ${errorMessage}`);
+      } else {
+        Alert.alert(
+          'Login Failed',
+          errorMessage
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -107,9 +125,12 @@ export default function LoginScreen({ navigation }) {
                 autoComplete="password"
                 style={styles.input}
                 right={
-                  <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color={colors.primary}
                     onPress={() => setShowPassword(!showPassword)}
+                    style={styles.iconButton}
                   />
                 }
                 theme={{
@@ -240,5 +261,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
     lineHeight: typography.caption.lineHeight,
+  },
+  iconButton: {
+    padding: 8,
+    cursor: 'pointer',
   },
 });

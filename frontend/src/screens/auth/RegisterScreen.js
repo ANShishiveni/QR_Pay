@@ -16,9 +16,10 @@ import {
   Text,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { authAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterScreen({ navigation }) {
   const [formData, setFormData] = useState({
@@ -32,6 +33,7 @@ export default function RegisterScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { login } = useAuth();
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -69,35 +71,61 @@ export default function RegisterScreen({ navigation }) {
 
     setIsLoading(true);
     try {
+      console.log('🎯 Starting registration with data:', { ...formData, password: '[HIDDEN]' });
+      
       const { confirmPassword, ...registrationData } = formData;
+      console.log('📤 Sending registration request to API...');
+      console.log('📋 Registration data:', registrationData);
+      
       const response = await authAPI.register(registrationData);
+      console.log('✅ Registration response:', response.data);
+      
       const { token, user } = response.data;
 
-      // Store auth data
-      await AsyncStorage.setItem('authToken', token);
-      await AsyncStorage.setItem('userData', JSON.stringify(user));
+      // Use AuthContext to handle login
+      await login(token, user);
+      console.log('Auth data stored successfully');
 
-      Alert.alert(
-        'Registration Successful',
-        'Your account has been created successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainTabs' }],
-              });
+      // Show success message
+      console.log('🎉 Registration successful! Navigating to home...');
+      
+      if (Platform.OS === 'web') {
+        alert('Registration Successful! Your account has been created successfully!');
+      } else {
+        Alert.alert(
+          'Registration Successful',
+          'Your account has been created successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigation will be handled by AuthContext
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
     } catch (error) {
-      console.error('Registration error:', error);
-      Alert.alert(
-        'Registration Failed',
-        error.response?.data?.error || 'An error occurred during registration'
-      );
+      console.error('❌ Registration error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config,
+        stack: error.stack
+      });
+      
+      // Show error message
+      const errorMessage = error.response?.data?.error || error.message || 'An error occurred during registration';
+      console.error('❌ Registration failed:', errorMessage);
+      
+      if (Platform.OS === 'web') {
+        alert(`Registration Failed: ${errorMessage}`);
+      } else {
+        Alert.alert(
+          'Registration Failed',
+          errorMessage
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -188,9 +216,12 @@ export default function RegisterScreen({ navigation }) {
                 autoComplete="password"
                 style={styles.input}
                 right={
-                  <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color={colors.primary}
                     onPress={() => setShowPassword(!showPassword)}
+                    style={styles.iconButton}
                   />
                 }
                 theme={{
@@ -209,9 +240,12 @@ export default function RegisterScreen({ navigation }) {
                 autoComplete="password"
                 style={styles.input}
                 right={
-                  <TextInput.Icon
-                    icon={showConfirmPassword ? 'eye-off' : 'eye'}
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color={colors.primary}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.iconButton}
                   />
                 }
                 theme={{
@@ -336,5 +370,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.8,
     lineHeight: typography.caption.lineHeight,
+  },
+  iconButton: {
+    padding: 8,
+    cursor: 'pointer',
   },
 });

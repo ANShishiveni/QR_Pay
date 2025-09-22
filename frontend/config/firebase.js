@@ -1,16 +1,18 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
+import { getAnalytics } from 'firebase/analytics';
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBvQ8K9X2L3M4N5O6P7Q8R9S0T1U2V3W4X",
+  apiKey: "AIzaSyDmrGg9NO2bBVw9PhA9eyp7MezVOvpCrw4",
   authDomain: "qr-money-transfer.firebaseapp.com",
   databaseURL: "https://qr-money-transfer-default-rtdb.firebaseio.com",
   projectId: "qr-money-transfer",
-  storageBucket: "qr-money-transfer.appspot.com",
-  messagingSenderId: "113446707674615372792",
-  appId: "1:113446707674615372792:web:your-app-id"
+  storageBucket: "qr-money-transfer.firebasestorage.app",
+  messagingSenderId: "810625981288",
+  appId: "1:810625981288:web:3c6fdfd048faf3df2154dd",
+  measurementId: "G-XRDNE3WQXS"
 };
 
 // Initialize Firebase
@@ -19,5 +21,6 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase services
 export const auth = getAuth(app);
 export const database = getDatabase(app);
+export const analytics = getAnalytics(app);
 
 export default app;

@@ -1,13 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { auth, realtimeDb } = require('../config/firebase');
-const { initializeFirebase } = require('../config/firebase');
+const { getFirebaseServices } = require('../config/firebase');
 
 const router = express.Router();
-
-// Initialize Firebase
-initializeFirebase();
 
 // Middleware to verify JWT token
 const verifyToken = async (req, res, next) => {
@@ -36,8 +32,14 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Get Firebase services
+    const { auth, realtimeDb } = getFirebaseServices();
+
+    // Sanitize email for Firebase database key
+    const sanitizedEmail = email.replace(/[.#$[\]]/g, '_');
+
     // Check if user already exists
-    const existingUser = await realtimeDb.ref(`users/${email.replace('.', '_')}`).once('value');
+    const existingUser = await realtimeDb.ref(`users/${sanitizedEmail}`).once('value');
     if (existingUser.exists()) {
       return res.status(400).json({ error: 'User already exists' });
     }
@@ -65,7 +67,7 @@ router.post('/register', async (req, res) => {
       cards: {}
     };
 
-    await realtimeDb.ref(`users/${email.replace('.', '_')}`).set(userData);
+    await realtimeDb.ref(`users/${sanitizedEmail}`).set(userData);
 
     // Generate JWT token
     const token = jwt.sign(
@@ -106,8 +108,14 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    // Get Firebase services
+    const { realtimeDb } = getFirebaseServices();
+
+    // Sanitize email for Firebase database key
+    const sanitizedEmail = email.replace(/[.#$[\]]/g, '_');
+
     // Get user from Realtime Database
-    const userSnapshot = await realtimeDb.ref(`users/${email.replace('.', '_')}`).once('value');
+    const userSnapshot = await realtimeDb.ref(`users/${sanitizedEmail}`).once('value');
     const userData = userSnapshot.val();
 
     if (!userData) {
