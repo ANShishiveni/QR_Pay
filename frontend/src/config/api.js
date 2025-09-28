@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '../utils/asyncStorage';
 
 // Base API configuration
-const API_BASE_URL = 'http://192.168.113.49:3000'; // Your computer's IP address
+const API_BASE_URL = 'http://10.180.59.10:3000'; // Your computer's IP address
 
 // Test API connection
 console.log('🔗 API Base URL:', API_BASE_URL);
@@ -98,6 +98,14 @@ export const qrAPI = {
   scanQR: (qrData) => apiClient.post('/api/qr/scan', qrData),
   confirmPayment: (paymentData) => apiClient.post('/api/qr/confirm-payment', paymentData),
   getQRHistory: () => apiClient.get('/api/qr/history'),
+};
+
+// OTP API endpoints
+export const otpAPI = {
+  sendOTP: (phoneNumber, purpose) => apiClient.post('/api/otp/send', { phoneNumber, purpose }),
+  verifyOTP: (sessionId, otp) => apiClient.post('/api/otp/verify', { sessionId, otp }),
+  resendOTP: (phoneNumber, purpose) => apiClient.post('/api/otp/resend', { phoneNumber, purpose }),
+  getOTPStatus: (sessionId) => apiClient.get(`/api/otp/status/${sessionId}`),
 };
 
 export default apiClient;

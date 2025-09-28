@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,15 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { userAPI } from '../../config/api';
 import { colors } from '../../styles/theme';
+import pushNotificationService from '../../services/pushNotificationService';
+import mfaService from '../../services/mfaService';
 
 const SettingsScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -23,9 +26,19 @@ const SettingsScreen = ({ navigation }) => {
     newPassword: '',
     confirmPassword: '',
   });
+  
+  // Authentication settings state
+  const [authSettings, setAuthSettings] = useState({
+    smsEnabled: true,
+    pushEnabled: false,
+    primaryMethod: 'sms',
+  });
+  const [availableMethods, setAvailableMethods] = useState([]);
+  const [mfaStatus, setMfaStatus] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadUserProfile();
+    loadAuthSettings();
   }, []);
 
   const loadUserProfile = async () => {
@@ -35,6 +48,29 @@ const SettingsScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error loading profile:', error);
       Alert.alert('Error', 'Failed to load profile');
+    }
+  };
+
+  const loadAuthSettings = async () => {
+    try {
+      setLoading(true);
+      
+      // Initialize MFA service
+      await mfaService.initialize();
+      
+      // Get MFA status
+      const status = await mfaService.getStatus();
+      setMfaStatus(status);
+      
+      if (status.success) {
+        setAuthSettings(status.preferences);
+        setAvailableMethods(status.availableMethods);
+      }
+    } catch (error) {
+      console.error('Error loading auth settings:', error);
+      Alert.alert('Error', 'Failed to load authentication settings');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -136,6 +172,48 @@ const SettingsScreen = ({ navigation }) => {
         { text: 'Cancel', style: 'cancel' },
       ]
     );
+  };
+
+  // Authentication settings handlers
+
+  const handlePushToggle = async (enabled) => {
+    try {
+      setLoading(true);
+      
+      if (enabled) {
+        const result = await pushNotificationService.requestPermissions();
+        if (result.granted) {
+          setAuthSettings(prev => ({ ...prev, pushEnabled: true }));
+          await mfaService.updatePreferences({ pushEnabled: true });
+          Alert.alert('Success', 'Push notifications enabled');
+        } else {
+          Alert.alert('Error', 'Push notification permission denied');
+        }
+      } else {
+        setAuthSettings(prev => ({ ...prev, pushEnabled: false }));
+        await mfaService.updatePreferences({ pushEnabled: false });
+        Alert.alert('Success', 'Push notifications disabled');
+      }
+    } catch (error) {
+      console.error('Error toggling push notifications:', error);
+      Alert.alert('Error', 'Failed to update push notification settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePrimaryMethodChange = async (method) => {
+    try {
+      setLoading(true);
+      setAuthSettings(prev => ({ ...prev, primaryMethod: method }));
+      await mfaService.updatePreferences({ primaryMethod: method });
+      Alert.alert('Success', `Primary authentication method changed to ${method}`);
+    } catch (error) {
+      console.error('Error changing primary method:', error);
+      Alert.alert('Error', 'Failed to update primary authentication method');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePasswordChange = async () => {
@@ -266,6 +344,56 @@ const SettingsScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Authentication Settings Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Authentication Settings</Text>
+          
+          {/* SMS OTP */}
+          <View style={styles.settingItem}>
+            <View style={styles.settingInfo}>
+              <Ionicons name="chatbubble" size={24} color={colors.primary} />
+              <View style={styles.settingText}>
+                <Text style={styles.settingTitle}>SMS OTP</Text>
+                <Text style={styles.settingDescription}>
+                  Receive verification codes via SMS for secure payments
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={authSettings.smsEnabled}
+              onValueChange={(enabled) => {
+                setAuthSettings(prev => ({ ...prev, smsEnabled: enabled }));
+                mfaService.updatePreferences({ smsEnabled: enabled });
+              }}
+              disabled={loading}
+              trackColor={{ false: colors.gray, true: colors.primary }}
+              thumbColor={authSettings.smsEnabled ? colors.white : colors.lightGray}
+            />
+          </View>
+
+          {/* Push Notifications */}
+          {availableMethods.find(method => method.id === 'push') && (
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <Ionicons name="notifications" size={24} color={colors.primary} />
+                <View style={styles.settingText}>
+                  <Text style={styles.settingTitle}>Push Notifications</Text>
+                  <Text style={styles.settingDescription}>
+                    Receive OTP codes via push notifications
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={authSettings.pushEnabled}
+                onValueChange={handlePushToggle}
+                disabled={loading}
+                trackColor={{ false: colors.gray, true: colors.primary }}
+                thumbColor={authSettings.pushEnabled ? colors.white : colors.lightGray}
+              />
+            </View>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -375,6 +503,54 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Authentication settings styles
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  settingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 14,
+    color: colors.gray,
+    lineHeight: 18,
+  },
+  methodSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.lightGray,
+    borderRadius: 8,
+    minWidth: 120,
+  },
+  methodText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    marginRight: 8,
   },
 });
 

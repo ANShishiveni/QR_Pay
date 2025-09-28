@@ -14,10 +14,11 @@ try {
   process.exit(1);
 }
 
-const authRoutes = require('./routes/auth');
+const { router: authRoutes } = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const paymentRoutes = require('./routes/payments');
 const qrRoutes = require('./routes/qr');
+const otpRoutes = require('./routes/otp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,12 +35,12 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-        origin: [
+              origin: [
     'http://localhost:3000',
     'http://localhost:19006',
     'http://127.0.0.1:19006',
-    'http://192.168.113.49:19006',
-    'exp://192.168.113.49:8081',
+    'http://10.180.59.10:19006',
+    'exp://10.180.59.10:8081',
     'http://10.139.208.10:19006',
     'exp://10.139.208.10:8081',
     'exp://192.168.1.100:19000',
@@ -56,6 +57,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/qr', qrRoutes);
+app.use('/api/otp', otpRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -84,7 +86,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-        console.log(`🌐 Network access: http://192.168.113.49:${PORT}/api/health`);
+              console.log(`🌐 Network access: http://10.180.59.10:${PORT}/api/health`);
 });
 
 module.exports = app;

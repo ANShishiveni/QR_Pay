@@ -4,6 +4,7 @@ const { getFirebaseServices } = require('../config/firebase');
 const { createPaymentMethod, simulateCrossBankTransfer, MOCK_BANKS } = require('../config/stripe');
 const jwt = require('jsonwebtoken');
 const { validateCard } = require('../utils/cardValidation');
+const { verifyOTPSession } = require('../middleware/otpAuth');
 
 const router = express.Router();
 
@@ -176,7 +177,7 @@ router.delete('/remove-card/:cardId', verifyToken, async (req, res) => {
 });
 
 // Process payment between users
-router.post('/process-payment', verifyToken, async (req, res) => {
+router.post('/process-payment', verifyToken, verifyOTPSession, async (req, res) => {
   try {
     const { receiverEmail, amount, description, senderCardId } = req.body;
     const { realtimeDb } = getFirebaseServices();

@@ -4,6 +4,7 @@ const QRCode = require('qrcode');
 const crypto = require('crypto');
 const { getFirebaseServices } = require('../config/firebase');
 const jwt = require('jsonwebtoken');
+const { verifyOTPSession } = require('../middleware/otpAuth');
 
 const router = express.Router();
 
@@ -48,7 +49,7 @@ const verifyToken = async (req, res, next) => {
 // Generate QR code for payment request
 router.post('/generate', verifyToken, async (req, res) => {
   try {
-    const { amount, description, expiresIn = 300 } = req.body; // expiresIn in seconds, default 5 minutes
+    const { amount, description, reference, expiresIn = 300 } = req.body; // expiresIn in seconds, default 5 minutes
     const { realtimeDb } = getFirebaseServices();
 
     if (!amount || amount <= 0) {
@@ -67,6 +68,7 @@ router.post('/generate', verifyToken, async (req, res) => {
       amount: paymentAmount,
       currency: 'NAD',
       description: description || 'QR Payment Request',
+      reference: reference || '',
       status: 'pending',
       createdAt: new Date().toISOString(),
       expiresAt: expiresAt
@@ -199,7 +201,7 @@ router.post('/scan', verifyToken, async (req, res) => {
 });
 
 // Confirm payment after QR scan
-router.post('/confirm-payment', verifyToken, async (req, res) => {
+router.post('/confirm-payment', verifyToken, verifyOTPSession, async (req, res) => {
   try {
     const { requestId, receiverCardId } = req.body;
     const { realtimeDb } = getFirebaseServices();

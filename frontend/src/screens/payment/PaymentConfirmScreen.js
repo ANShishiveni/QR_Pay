@@ -35,18 +35,27 @@ export default function PaymentConfirmScreen({ route, navigation }) {
         },
         {
           text: 'Confirm',
-          onPress: processPayment,
+          onPress: () => {
+            // Navigate directly to OTP verification
+            navigation.navigate('OTPVerification', {
+              phoneNumber: '+264816294914', // Verified Twilio number
+              purpose: 'payment_verification',
+              paymentRequest: paymentRequest,
+              receiverCard: receiverCard,
+            });
+          },
         },
       ]
     );
   };
 
-  const processPayment = async () => {
+  const processPayment = async (sessionId) => {
     setIsProcessing(true);
     try {
       const response = await qrAPI.confirmPayment({
         requestId: paymentRequest.id,
         receiverCardId: receiverCard.id,
+        sessionId: sessionId, // Include OTP session ID
       });
 
       const { transaction } = response.data;

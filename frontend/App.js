@@ -11,6 +11,8 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 // Import screens
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
+import OTPVerificationScreen from './src/screens/auth/OTPVerificationScreen';
+import BiometricAuthScreen from './src/screens/auth/BiometricAuthScreen';
 import HomeScreen from './src/screens/main/HomeScreen';
 import QRGenerateScreen from './src/screens/qr/QRGenerateScreen';
 import QRScanScreen from './src/screens/qr/QRScanScreen';
@@ -85,6 +87,8 @@ function AppContent() {
             <Stack.Screen name="Cards" component={CardsScreen} />
             <Stack.Screen name="Transactions" component={TransactionsScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
+            <Stack.Screen name="BiometricAuth" component={BiometricAuthScreen} />
           </>
         ) : (
           <>

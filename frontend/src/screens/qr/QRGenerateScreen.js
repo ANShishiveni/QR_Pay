@@ -27,6 +27,7 @@ import { colors, spacing } from '../../styles/theme';
 export default function QRGenerateScreen({ navigation }) {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [reference, setReference] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [qrCodeData, setQrCodeData] = useState(null);
   const [paymentRequest, setPaymentRequest] = useState(null);
@@ -44,6 +45,7 @@ export default function QRGenerateScreen({ navigation }) {
       const response = await qrAPI.generateQR({
         amount: parseFloat(amount),
         description: description || 'QR Payment Request',
+        reference: reference || '',
         expiresIn: 300, // 5 minutes
       });
 
@@ -110,6 +112,7 @@ export default function QRGenerateScreen({ navigation }) {
   const handleReset = () => {
     setAmount('');
     setDescription('');
+    setReference('');
     setQrCodeData(null);
     setPaymentRequest(null);
     setQrCodeError(null);
@@ -174,6 +177,21 @@ export default function QRGenerateScreen({ navigation }) {
                 style={styles.input}
                 multiline
                 numberOfLines={3}
+                theme={{
+                  colors: {
+                    primary: colors.primary,
+                  },
+                }}
+              />
+
+              <TextInput
+                label="Reference (Optional)"
+                value={reference}
+                onChangeText={setReference}
+                mode="outlined"
+                placeholder="e.g., Invoice #12345, Order #ABC123"
+                style={styles.input}
+                left={<Ionicons name="document-text" size={24} color={colors.primary} style={styles.iconButton} />}
                 theme={{
                   colors: {
                     primary: colors.primary,
