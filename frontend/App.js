@@ -17,6 +17,7 @@ import HomeScreen from './src/screens/main/HomeScreen';
 import QRGenerateScreen from './src/screens/qr/QRGenerateScreen';
 import QRScanScreen from './src/screens/qr/QRScanScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
+import MyProfileScreen from './src/screens/profile/MyProfileScreen';
 import CardsScreen from './src/screens/profile/CardsScreen';
 import TransactionsScreen from './src/screens/profile/TransactionsScreen';
 import SettingsScreen from './src/screens/profile/SettingsScreen';
@@ -85,6 +86,7 @@ function AppContent() {
             <Stack.Screen name="QRScan" component={QRScanScreen} />
             <Stack.Screen name="PaymentConfirm" component={PaymentConfirmScreen} />
             <Stack.Screen name="Cards" component={CardsScreen} />
+            <Stack.Screen name="MyProfile" component={MyProfileScreen} />
             <Stack.Screen name="Transactions" component={TransactionsScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />

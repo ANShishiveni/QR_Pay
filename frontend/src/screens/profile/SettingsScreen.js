@@ -6,16 +6,13 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
-  Image,
   TextInput,
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { userAPI } from '../../config/api';
 import { colors } from '../../styles/theme';
-import pushNotificationService from '../../services/pushNotificationService';
 import mfaService from '../../services/mfaService';
 
 const SettingsScreen = ({ navigation }) => {
@@ -30,7 +27,6 @@ const SettingsScreen = ({ navigation }) => {
   // Authentication settings state
   const [authSettings, setAuthSettings] = useState({
     smsEnabled: true,
-    pushEnabled: false,
     primaryMethod: 'sms',
   });
   const [availableMethods, setAvailableMethods] = useState([]);
@@ -86,121 +82,7 @@ const SettingsScreen = ({ navigation }) => {
     return true;
   };
 
-  const pickImage = async () => {
-    const hasPermission = await requestImagePickerPermissions();
-    if (!hasPermission) return;
-
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        base64: false,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        await uploadPhoto(result.assets[0]);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
-    }
-  };
-
-  const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'We need access to your camera to take a profile picture.'
-      );
-      return;
-    }
-
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        base64: false,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        await uploadPhoto(result.assets[0]);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo');
-    }
-  };
-
-  const uploadPhoto = async (imageAsset) => {
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('photo', {
-        uri: imageAsset.uri,
-        type: 'image/jpeg',
-        name: 'profile-photo.jpg',
-      });
-
-      const response = await userAPI.uploadPhoto(formData);
-      
-      // Update local user state
-      setUser(prev => ({
-        ...prev,
-        photoUrl: response.data.photoUrl
-      }));
-
-      Alert.alert('Success', 'Profile photo updated successfully!');
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-      Alert.alert('Error', 'Failed to upload photo');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const showPhotoOptions = () => {
-    Alert.alert(
-      'Select Photo',
-      'Choose how you want to add a profile photo',
-      [
-        { text: 'Camera', onPress: takePhoto },
-        { text: 'Photo Library', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
-
   // Authentication settings handlers
-
-  const handlePushToggle = async (enabled) => {
-    try {
-      setLoading(true);
-      
-      if (enabled) {
-        const result = await pushNotificationService.requestPermissions();
-        if (result.granted) {
-          setAuthSettings(prev => ({ ...prev, pushEnabled: true }));
-          await mfaService.updatePreferences({ pushEnabled: true });
-          Alert.alert('Success', 'Push notifications enabled');
-        } else {
-          Alert.alert('Error', 'Push notification permission denied');
-        }
-      } else {
-        setAuthSettings(prev => ({ ...prev, pushEnabled: false }));
-        await mfaService.updatePreferences({ pushEnabled: false });
-        Alert.alert('Success', 'Push notifications disabled');
-      }
-    } catch (error) {
-      console.error('Error toggling push notifications:', error);
-      Alert.alert('Error', 'Failed to update push notification settings');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handlePrimaryMethodChange = async (method) => {
     try {
@@ -270,30 +152,6 @@ const SettingsScreen = ({ navigation }) => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Profile Photo Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile Photo</Text>
-          <View style={styles.photoSection}>
-            <View style={styles.photoContainer}>
-              {user?.photoUrl ? (
-                <Image source={{ uri: user.photoUrl }} style={styles.profilePhoto} />
-              ) : (
-                <View style={styles.placeholderPhoto}>
-                  <Ionicons name="person" size={40} color={colors.gray} />
-                </View>
-              )}
-            </View>
-            <TouchableOpacity
-              style={styles.changePhotoButton}
-              onPress={showPhotoOptions}
-              disabled={loading}
-            >
-              <Ionicons name="camera" size={20} color={colors.white} />
-              <Text style={styles.changePhotoText}>Change Photo</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Password Change Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Change Password</Text>
@@ -371,28 +229,6 @@ const SettingsScreen = ({ navigation }) => {
               thumbColor={authSettings.smsEnabled ? colors.white : colors.lightGray}
             />
           </View>
-
-          {/* Push Notifications */}
-          {availableMethods.find(method => method.id === 'push') && (
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Ionicons name="notifications" size={24} color={colors.primary} />
-                <View style={styles.settingText}>
-                  <Text style={styles.settingTitle}>Push Notifications</Text>
-                  <Text style={styles.settingDescription}>
-                    Receive OTP codes via push notifications
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={authSettings.pushEnabled}
-                onValueChange={handlePushToggle}
-                disabled={loading}
-                trackColor={{ false: colors.gray, true: colors.primary }}
-                thumbColor={authSettings.pushEnabled ? colors.white : colors.lightGray}
-              />
-            </View>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>

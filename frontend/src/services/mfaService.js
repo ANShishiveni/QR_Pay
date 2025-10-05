@@ -1,17 +1,14 @@
 import AsyncStorage from '../utils/asyncStorage';
 import biometricService from './biometricService';
-import pushNotificationService from './pushNotificationService';
 import { otpAPI } from '../config/api';
 
 class MFAService {
   constructor() {
     this.preferences = {
-      primaryMethod: 'biometric',
+      primaryMethod: 'sms',
       secondaryMethod: 'sms',
-      fallbackMethod: 'push',
       biometricEnabled: false,
       smsEnabled: true,
-      pushEnabled: false,
     };
   }
 
@@ -24,9 +21,6 @@ class MFAService {
       // Load user preferences
       await this.loadPreferences();
       
-      // Initialize push notifications
-      const pushInit = await pushNotificationService.initialize();
-      
       // Check biometric availability
       const biometricStatus = await biometricService.getStatus();
       
@@ -34,7 +28,6 @@ class MFAService {
         success: true,
         preferences: this.preferences,
         biometricAvailable: biometricStatus.canUse,
-        pushAvailable: pushInit.success,
       };
     } catch (error) {
       console.error('MFA initialization failed:', error);
@@ -117,18 +110,6 @@ class MFAService {
       enabled: this.preferences.smsEnabled,
     });
 
-    // Check push notification availability
-    const pushStatus = await pushNotificationService.getPermissionStatus();
-    if (pushStatus.granted) {
-      methods.push({
-        id: 'push',
-        name: 'Push Notification',
-        description: 'Receive OTP via push notification',
-        available: true,
-        enabled: this.preferences.pushEnabled,
-      });
-    }
-
     return methods;
   }
 
@@ -156,9 +137,6 @@ class MFAService {
         
         case 'sms':
           return await this.authenticateWithSMS(phoneNumber, purpose);
-        
-        case 'push':
-          return await this.authenticateWithPush(purpose);
         
         default:
           // Fallback to SMS
@@ -239,33 +217,6 @@ class MFAService {
   }
 
   /**
-   * Authenticate with push notification
-   * @param {string} purpose - OTP purpose
-   * @returns {Promise<Object>} - Authentication result
-   */
-  async authenticateWithPush(purpose) {
-    try {
-      // Generate OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // Send push notification with OTP
-      await pushNotificationService.sendOTPNotification(otp, purpose);
-      
-      return {
-        success: true,
-        method: 'push',
-        otp: otp, // For demo purposes - in production, this would be handled server-side
-        requiresVerification: true,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
    * Verify OTP
    * @param {string} sessionId - OTP session ID
    * @param {string} otp - OTP code
@@ -303,14 +254,12 @@ class MFAService {
     try {
       const availableMethods = await this.getAvailableMethods();
       const biometricStatus = await biometricService.getStatus();
-      const pushStatus = await pushNotificationService.getPermissionStatus();
       
       return {
         success: true,
         preferences: this.preferences,
         availableMethods: availableMethods,
         biometricAvailable: biometricStatus.canUse,
-        pushAvailable: pushStatus.granted,
         isConfigured: availableMethods.some(method => method.enabled),
       };
     } catch (error) {
@@ -332,7 +281,6 @@ class MFAService {
       const { 
         enableBiometric = false, 
         enableSMS = true, 
-        enablePush = false,
         primaryMethod = 'sms'
       } = setupOptions;
 
@@ -340,7 +288,6 @@ class MFAService {
       await this.updatePreferences({
         biometricEnabled: enableBiometric,
         smsEnabled: enableSMS,
-        pushEnabled: enablePush,
         primaryMethod: primaryMethod,
       });
 
@@ -349,14 +296,6 @@ class MFAService {
         const biometricSetup = await biometricService.setupBiometric();
         if (!biometricSetup.success) {
           console.warn('Biometric setup failed:', biometricSetup.error);
-        }
-      }
-
-      // Setup push notifications if enabled
-      if (enablePush) {
-        const pushSetup = await pushNotificationService.requestPermissions();
-        if (!pushSetup.granted) {
-          console.warn('Push notification setup failed');
         }
       }
 

@@ -100,7 +100,7 @@ export default function QRGenerateScreen({ navigation }) {
       // Share the image
       await Share.share({
         url: fileUri,
-        message: `Payment Request: N$ ${amount}\nDescription: ${description || 'QR Payment Request'}\n\nScan this QR code to pay.`,
+        message: `Payment Request: N$ ${amount}\nReference: ${reference}\n\nScan this QR code to pay.`,
         title: 'QR Payment Request',
       });
 
@@ -241,12 +241,10 @@ export default function QRGenerateScreen({ navigation }) {
                     <Text style={styles.detailValue}>N$ {parseFloat(amount).toFixed(2)}</Text>
                   </View>
                   
-                  {description && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Description:</Text>
-                      <Text style={styles.detailValue}>{description}</Text>
-                    </View>
-                  )}
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Reference:</Text>
+                    <Text style={styles.detailValue}>{reference}</Text>
+                  </View>
                   
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Expires in:</Text>

@@ -40,7 +40,7 @@ class OTPService {
    * @param {string} hash - Hashed OTP
    * @returns {boolean} - Is valid OTP
    */
-  verifyOTP(otp, hash) {
+  verifyOTPHash(otp, hash) {
     const hashedOTP = this.hashOTP(otp);
     return hashedOTP === hash;
   }
@@ -161,7 +161,7 @@ class OTPService {
       });
 
       // Verify OTP
-      const isValid = this.verifyOTP(otp, sessionData.otpHash);
+      const isValid = this.verifyOTPHash(otp, sessionData.otpHash);
 
       if (isValid) {
         // Mark as verified

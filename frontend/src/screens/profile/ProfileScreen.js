@@ -26,13 +26,11 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
-  const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const { user, logout } = useAuth();
 
   useEffect(() => {
     loadUserData();
-    loadStats();
   }, []);
 
   // Refresh profile data when screen comes into focus (e.g., returning from Settings)
@@ -57,15 +55,6 @@ export default function ProfileScreen({ navigation }) {
       if (user) {
         setUserData(user);
       }
-    }
-  };
-
-  const loadStats = async () => {
-    try {
-      const response = await userAPI.getStats();
-      setStats(response.data.stats);
-    } catch (error) {
-      console.error('Error loading stats:', error);
     } finally {
       setIsLoading(false);
     }
@@ -96,19 +85,6 @@ export default function ProfileScreen({ navigation }) {
     } catch (error) {
       console.error('Logout error:', error);
     }
-  };
-
-  const formatAmount = (amount) => {
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount)) return 'N$ 0.00';
-    
-    // Format with commas for thousands separator
-    const formatted = numAmount.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    
-    return `N$ ${formatted}`;
   };
 
   if (isLoading) {
@@ -159,32 +135,18 @@ export default function ProfileScreen({ navigation }) {
       </LinearGradient>
 
       <View style={styles.content}>
-        {/* Quick Stats */}
-        {stats && (
-          <Card style={styles.statsCard}>
-            <Card.Content>
-              <Title style={styles.cardTitle}>Account Overview</Title>
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{stats.totalTransactions}</Text>
-                  <Text style={styles.statLabel}>Transactions</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{formatAmount(stats.totalSent)}</Text>
-                  <Text style={styles.statLabel}>Total Sent</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{formatAmount(stats.totalReceived)}</Text>
-                  <Text style={styles.statLabel}>Total Received</Text>
-                </View>
-              </View>
-            </Card.Content>
-          </Card>
-        )}
-
         {/* Menu Options */}
         <Card style={styles.menuCard}>
           <Card.Content>
+            <List.Item
+              title="My Profile"
+              description="Update your details and profile photo"
+              left={(props) => <Ionicons name="person" size={24} color={colors.primary} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+              onPress={() => navigation.navigate('MyProfile')}
+              style={styles.menuItem}
+            />
+            <Divider />
             <List.Item
               title="My Cards"
               description="Manage your linked payment cards"
@@ -195,17 +157,8 @@ export default function ProfileScreen({ navigation }) {
             />
             <Divider />
             <List.Item
-              title="Transaction History"
-              description="View all your payment history"
-              left={(props) => <Ionicons name="time" size={24} color={colors.primary} />}
-              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => navigation.navigate('Transactions')}
-              style={styles.menuItem}
-            />
-            <Divider />
-            <List.Item
               title="Settings"
-              description="Manage your profile photo and password"
+              description="Change password and app preferences"
               left={(props) => <Ionicons name="settings" size={24} color={colors.primary} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('Settings')}
@@ -217,7 +170,16 @@ export default function ProfileScreen({ navigation }) {
               description="Get help and contact support"
               left={(props) => <Ionicons name="help-circle" size={24} color={colors.primary} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => Alert.alert('Help & Support', 'For support, please contact us at support@qrmoneytransfer.com')}
+              onPress={() => Alert.alert('Help & Support', 'For support, please contact us at support@nampay.com')}
+              style={styles.menuItem}
+            />
+            <Divider />
+            <List.Item
+              title="Logout"
+              description="Sign out of your account"
+              left={(props) => <Ionicons name="log-out" size={24} color={colors.error} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+              onPress={handleLogout}
               style={styles.menuItem}
             />
           </Card.Content>
@@ -241,25 +203,6 @@ export default function ProfileScreen({ navigation }) {
             </View>
           </Card.Content>
         </Card>
-
-        {/* Logout Button */}
-        <Button
-          mode="outlined"
-          onPress={handleLogout}
-          style={styles.logoutButton}
-          textColor={colors.error}
-          buttonColor={colors.white}
-          theme={{
-            colors: {
-              primary: colors.error,
-            },
-          }}
-        >
-          <View style={styles.buttonContent}>
-            <Ionicons name="log-out" size={20} color={colors.error} style={styles.buttonIcon} />
-            <Text style={[styles.buttonText, { color: colors.error }]}>Logout</Text>
-          </View>
-        </Button>
       </View>
     </ScrollView>
   );
@@ -320,42 +263,11 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
   },
-  statsCard: {
-    elevation: 4,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.md,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: spacing.sm,
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-    minWidth: 0, // Allow flex shrinking
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
-    textAlign: 'center',
-    flexWrap: 'wrap',
-    maxWidth: '100%',
-  },
-  statLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    flexWrap: 'wrap',
-    maxWidth: '100%',
   },
   menuCard: {
     elevation: 4,

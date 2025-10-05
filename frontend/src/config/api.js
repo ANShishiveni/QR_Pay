@@ -74,11 +74,7 @@ export const userAPI = {
   getTransactions: (params) => apiClient.get('/api/users/transactions', { params }),
   getBalance: () => apiClient.get('/api/users/balance'),
   getStats: () => apiClient.get('/api/users/stats'),
-  uploadPhoto: (formData) => apiClient.post('/api/users/photo', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }),
+  uploadPhoto: (data) => apiClient.post('/api/users/photo', data),
   changePassword: (passwordData) => apiClient.put('/api/users/password', passwordData),
 };
 

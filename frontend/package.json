@@ -29,7 +29,6 @@
     "expo-linear-gradient": "~14.1.5",
     "expo-local-authentication": "~16.0.5",
     "expo-media-library": "~17.1.7",
-    "expo-notifications": "^0.31.4",
     "expo-permissions": "~14.2.1",
     "expo-status-bar": "~2.2.3",
     "firebase": "^11.0.0",

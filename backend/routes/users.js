@@ -182,30 +182,73 @@ router.get('/stats', verifyToken, async (req, res) => {
   }
 });
 
-// Upload user photo
-router.post('/photo', verifyToken, upload.single('photo'), async (req, res) => {
+// Update user profile
+router.put('/profile', verifyToken, async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No photo uploaded' });
+    const { firstName, lastName, email, phoneNumber } = req.body;
+    
+    if (!firstName || !lastName) {
+      return res.status(400).json({ error: 'First name and last name are required' });
     }
 
     const { realtimeDb } = getFirebaseServices();
     
-    // For development, we'll use a simple base64 approach
-    // Convert the image buffer to base64
-    const base64Image = req.file.buffer.toString('base64');
-    const dataUrl = `data:${req.file.mimetype};base64,${base64Image}`;
+    // Update user profile
+    const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
+    const updates = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Only update phone number if provided
+    if (phoneNumber) {
+      updates.phoneNumber = phoneNumber.trim();
+    }
+
+    await userRef.update(updates);
+
+    // Get updated user data
+    const userSnapshot = await userRef.once('value');
+    const userData = userSnapshot.val();
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: userData
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile', details: error.message });
+  }
+});
+
+// Upload user photo
+router.post('/photo', verifyToken, async (req, res) => {
+  try {
+    const { photo } = req.body;
+    
+    if (!photo) {
+      return res.status(400).json({ error: 'No photo data provided' });
+    }
+
+    // Validate base64 data URL format
+    if (!photo.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Invalid photo format. Expected base64 data URL.' });
+    }
+
+    const { realtimeDb } = getFirebaseServices();
     
     // Update user profile with base64 photo data
     const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
     await userRef.update({
-      photoUrl: dataUrl,
+      photoUrl: photo,
       updatedAt: new Date().toISOString()
     });
 
     res.json({
       message: 'Photo uploaded successfully',
-      photoUrl: dataUrl
+      photoUrl: photo
     });
 
   } catch (error) {
