@@ -213,7 +213,6 @@ export default function CardsScreen({ navigation }) {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Ionicons name="card" size={32} color={colors.white} />
           <Title style={styles.headerTitle}>My Cards</Title>
           <Paragraph style={styles.headerSubtitle}>
             Manage your payment cards

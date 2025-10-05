@@ -127,7 +127,6 @@ export default function QRScanScreen({ navigation }) {
           </Button>
         </View>
         <View style={styles.headerContent}>
-          <Ionicons name="scan" size={32} color={colors.white} />
           <Title style={styles.headerTitle}>Scan QR Code</Title>
           <Paragraph style={styles.headerSubtitle}>
             Point your camera at a payment request QR code

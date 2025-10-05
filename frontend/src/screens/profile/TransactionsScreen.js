@@ -198,7 +198,6 @@ export default function TransactionsScreen({ navigation }) {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Ionicons name="list" size={32} color={colors.white} />
           <Title style={styles.headerTitle}>Transaction History</Title>
           <Paragraph style={styles.headerSubtitle}>
             View all your payment transactions

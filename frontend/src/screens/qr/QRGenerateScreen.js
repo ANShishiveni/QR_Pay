@@ -26,7 +26,6 @@ import { colors, spacing } from '../../styles/theme';
 
 export default function QRGenerateScreen({ navigation }) {
   const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
   const [reference, setReference] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [qrCodeData, setQrCodeData] = useState(null);
@@ -39,13 +38,18 @@ export default function QRGenerateScreen({ navigation }) {
       return;
     }
 
+    if (!reference.trim()) {
+      Alert.alert('Error', 'Please enter a reference for this transaction');
+      return;
+    }
+
     setIsGenerating(true);
     setQrCodeError(null);
     try {
       const response = await qrAPI.generateQR({
         amount: parseFloat(amount),
-        description: description || 'QR Payment Request',
-        reference: reference || '',
+        description: reference.trim(), // Use reference as description
+        reference: reference.trim(),
         expiresIn: 300, // 5 minutes
       });
 
@@ -111,7 +115,6 @@ export default function QRGenerateScreen({ navigation }) {
 
   const handleReset = () => {
     setAmount('');
-    setDescription('');
     setReference('');
     setQrCodeData(null);
     setPaymentRequest(null);
@@ -135,7 +138,6 @@ export default function QRGenerateScreen({ navigation }) {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Ionicons name="qr-code" size={32} color={colors.white} />
           <Title style={styles.headerTitle}>Generate QR Code</Title>
           <Paragraph style={styles.headerSubtitle}>
             Create a payment request QR code
@@ -149,7 +151,7 @@ export default function QRGenerateScreen({ navigation }) {
             <Card.Content>
               <Title style={styles.cardTitle}>Payment Request Details</Title>
               <Paragraph style={styles.cardSubtitle}>
-                Enter the amount and description for your payment request
+                Enter the amount and reference for your payment request
               </Paragraph>
 
               <TextInput
@@ -169,27 +171,11 @@ export default function QRGenerateScreen({ navigation }) {
               />
 
               <TextInput
-                label="Description (Optional)"
-                value={description}
-                onChangeText={setDescription}
-                mode="outlined"
-                placeholder="e.g., Lunch payment, Shared expenses"
-                style={styles.input}
-                multiline
-                numberOfLines={3}
-                theme={{
-                  colors: {
-                    primary: colors.primary,
-                  },
-                }}
-              />
-
-              <TextInput
-                label="Reference (Optional)"
+                label="Reference *"
                 value={reference}
                 onChangeText={setReference}
                 mode="outlined"
-                placeholder="e.g., Invoice #12345, Order #ABC123"
+                placeholder="Enter your reference"
                 style={styles.input}
                 left={<Ionicons name="document-text" size={24} color={colors.primary} style={styles.iconButton} />}
                 theme={{
