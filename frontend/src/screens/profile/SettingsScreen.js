@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { userAPI } from '../../config/api';
 import { colors } from '../../styles/theme';
 import mfaService from '../../services/mfaService';
+import toastService from '../../services/toastService';
 
 const SettingsScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -43,7 +44,7 @@ const SettingsScreen = ({ navigation }) => {
       setUser(response.data.user);
     } catch (error) {
       console.error('Error loading profile:', error);
-      Alert.alert('Error', 'Failed to load profile');
+      toastService.error('Error', 'Failed to load profile');
     }
   };
 
@@ -64,7 +65,7 @@ const SettingsScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error loading auth settings:', error);
-      Alert.alert('Error', 'Failed to load authentication settings');
+      toastService.error('Error', 'Failed to load authentication settings');
     } finally {
       setLoading(false);
     }
@@ -73,10 +74,7 @@ const SettingsScreen = ({ navigation }) => {
   const requestImagePickerPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'We need access to your photo library to upload a profile picture.'
-      );
+      toastService.error('Permission Required', 'We need access to your photo library to upload a profile picture.');
       return false;
     }
     return true;
@@ -89,10 +87,10 @@ const SettingsScreen = ({ navigation }) => {
       setLoading(true);
       setAuthSettings(prev => ({ ...prev, primaryMethod: method }));
       await mfaService.updatePreferences({ primaryMethod: method });
-      Alert.alert('Success', `Primary authentication method changed to ${method}`);
+      toastService.success('Success', `Primary authentication method changed to ${method}`);
     } catch (error) {
       console.error('Error changing primary method:', error);
-      Alert.alert('Error', 'Failed to update primary authentication method');
+      toastService.error('Error', 'Failed to update primary authentication method');
     } finally {
       setLoading(false);
     }
@@ -102,17 +100,17 @@ const SettingsScreen = ({ navigation }) => {
     const { currentPassword, newPassword, confirmPassword } = passwordData;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all password fields');
+      toastService.error('Validation Error', 'Please fill in all password fields');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
+      toastService.error('Validation Error', 'New passwords do not match');
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long');
+      toastService.error('Validation Error', 'New password must be at least 6 characters long');
       return;
     }
 
@@ -123,7 +121,7 @@ const SettingsScreen = ({ navigation }) => {
         newPassword,
       });
 
-      Alert.alert('Success', 'Password changed successfully!');
+      toastService.success('Success', 'Password changed successfully!');
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -132,7 +130,7 @@ const SettingsScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error changing password:', error);
       const errorMessage = error.response?.data?.error || 'Failed to change password';
-      Alert.alert('Error', errorMessage);
+      toastService.error('Error', errorMessage);
     } finally {
       setLoading(false);
     }

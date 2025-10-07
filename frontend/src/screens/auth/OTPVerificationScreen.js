@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { otpAPI } from '../../config/api';
+import toastService from '../../services/toastService';
 
 const OTPVerificationScreen = ({ route, navigation }) => {
   const { phoneNumber, purpose = 'payment_verification', paymentRequest, receiverCard } = route.params;
@@ -64,13 +65,13 @@ const OTPVerificationScreen = ({ route, navigation }) => {
         setTimeLeft(300);
         setCanResend(false);
         startTimer();
-        Alert.alert('Success', 'OTP sent to your phone number');
+        toastService.success('Success', 'OTP sent to your phone number');
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to send OTP');
+        toastService.error('Error', response.data.error || 'Failed to send OTP');
       }
     } catch (error) {
       console.error('Send OTP error:', error);
-      Alert.alert('Error', 'Failed to send OTP. Please try again.');
+      toastService.error('Error', 'Failed to send OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -89,13 +90,13 @@ const OTPVerificationScreen = ({ route, navigation }) => {
         setCanResend(false);
         startTimer();
         setOtp(['', '', '', '', '', '']);
-        Alert.alert('Success', 'OTP resent to your phone number');
+        toastService.success('Success', 'OTP resent to your phone number');
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to resend OTP');
+        toastService.error('Error', response.data.error || 'Failed to resend OTP');
       }
     } catch (error) {
       console.error('Resend OTP error:', error);
-      Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+      toastService.error('Error', 'Failed to resend OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -122,12 +123,12 @@ const OTPVerificationScreen = ({ route, navigation }) => {
     const otpString = otp.join('');
     
     if (otpString.length !== 6) {
-      Alert.alert('Error', 'Please enter the complete 6-digit OTP');
+      toastService.error('Validation Error', 'Please enter the complete 6-digit OTP');
       return;
     }
 
     if (!sessionId) {
-      Alert.alert('Error', 'Session expired. Please request a new OTP');
+      toastService.error('Session Expired', 'Session expired. Please request a new OTP');
       return;
     }
 
@@ -140,29 +141,21 @@ const OTPVerificationScreen = ({ route, navigation }) => {
         if (purpose === 'payment_verification' && paymentRequest && receiverCard) {
           await processPayment(sessionId);
         } else {
-          Alert.alert('Success', 'OTP verified successfully', [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack()
-            }
-          ]);
+          toastService.success('Success', 'OTP verified successfully');
+          setTimeout(() => navigation.goBack(), 1000);
         }
       } else {
         setAttemptsLeft(response.data.attemptsLeft || attemptsLeft - 1);
-        Alert.alert('Error', response.data.error || 'Invalid OTP');
+        toastService.error('Verification Failed', response.data.error || 'Invalid OTP');
         
         if (attemptsLeft <= 1) {
-          Alert.alert('Error', 'Maximum attempts exceeded. Please request a new OTP', [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack()
-            }
-          ]);
+          toastService.error('Max Attempts Exceeded', 'Maximum attempts exceeded. Please request a new OTP');
+          setTimeout(() => navigation.goBack(), 2000);
         }
       }
     } catch (error) {
       console.error('Verify OTP error:', error);
-      Alert.alert('Error', 'Failed to verify OTP. Please try again.');
+      toastService.error('Verification Failed', 'Failed to verify OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -180,24 +173,20 @@ const OTPVerificationScreen = ({ route, navigation }) => {
 
       const { transaction } = response.data;
 
-      Alert.alert(
+      toastService.success(
         'Payment Successful!',
-        `You have successfully paid N$ ${transaction.amount.toFixed(2)} to ${transaction.senderName}.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainTabs' }],
-              });
-            },
-          },
-        ]
+        `You have successfully paid N$ ${transaction.amount.toFixed(2)} to ${transaction.senderName}.`
       );
+      
+      setTimeout(() => {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainTabs' }],
+        });
+      }, 2000);
     } catch (error) {
       console.error('Payment error:', error);
-      Alert.alert(
+      toastService.error(
         'Payment Failed',
         error.response?.data?.error || 'An error occurred during payment processing. Please try again.'
       );

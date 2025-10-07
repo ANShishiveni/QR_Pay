@@ -18,35 +18,31 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { qrAPI } from '../../config/api';
+import toastService from '../../services/toastService';
 import { theme, colors, spacing, typography } from '../../styles/theme';
 
 export default function PaymentConfirmScreen({ route, navigation }) {
   const { paymentRequest, receiverCard } = route.params;
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const handleConfirmPayment = async () => {
-    Alert.alert(
-      'Confirm Payment',
-      `Are you sure you want to pay N$ ${paymentRequest.amount.toFixed(2)} to ${paymentRequest.senderName}?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Confirm',
-          onPress: () => {
-            // Navigate directly to OTP verification
-            navigation.navigate('OTPVerification', {
-              phoneNumber: '+264816294914', // Verified Twilio number
-              purpose: 'payment_verification',
-              paymentRequest: paymentRequest,
-              receiverCard: receiverCard,
-            });
-          },
-        },
-      ]
-    );
+    setShowConfirmDialog(true);
+  };
+
+  const confirmPayment = () => {
+    setShowConfirmDialog(false);
+    // Navigate directly to OTP verification
+    navigation.navigate('OTPVerification', {
+      phoneNumber: '+264816294914', // Verified Twilio number
+      purpose: 'payment_verification',
+      paymentRequest: paymentRequest,
+      receiverCard: receiverCard,
+    });
+  };
+
+  const cancelPayment = () => {
+    setShowConfirmDialog(false);
   };
 
   const processPayment = async (sessionId) => {
@@ -60,24 +56,20 @@ export default function PaymentConfirmScreen({ route, navigation }) {
 
       const { transaction } = response.data;
 
-      Alert.alert(
+      toastService.success(
         'Payment Successful!',
-        `You have successfully paid N$ ${transaction.amount.toFixed(2)} to ${transaction.senderName}.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainTabs' }],
-              });
-            },
-          },
-        ]
+        `You have successfully paid N$ ${transaction.amount.toFixed(2)} to ${transaction.senderName}.`
       );
+      
+      setTimeout(() => {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainTabs' }],
+        });
+      }, 2000);
     } catch (error) {
       console.error('Payment error:', error);
-      Alert.alert(
+      toastService.error(
         'Payment Failed',
         error.response?.data?.error || 'An error occurred during payment processing. Please try again.'
       );
@@ -111,20 +103,20 @@ export default function PaymentConfirmScreen({ route, navigation }) {
   const expiryStatus = getExpiryStatus(paymentRequest.expiresAt);
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={[colors.primary, colors.primaryDark]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <Ionicons name="card" size={32} color={colors.white} />
-          <Title style={styles.headerTitle}>Confirm Payment</Title>
-          <Paragraph style={styles.headerSubtitle}>
-            Review and confirm your payment details
-          </Paragraph>
-        </View>
-      </LinearGradient>
+    <View style={styles.container}>
+      <ScrollView>
+        {/* Header */}
+        <LinearGradient
+          colors={[colors.primary, colors.primaryDark]}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <Title style={styles.headerTitle}>Confirm Payment</Title>
+            <Paragraph style={styles.headerSubtitle}>
+              Review and confirm your payment details
+            </Paragraph>
+          </View>
+        </LinearGradient>
 
       <View style={styles.content}>
         {/* Payment Request Details */}
@@ -239,12 +231,14 @@ export default function PaymentConfirmScreen({ route, navigation }) {
             mode="outlined"
             onPress={() => navigation.goBack()}
             style={styles.cancelButton}
+            contentStyle={styles.cancelButtonContent}
             disabled={isProcessing}
             theme={{
               colors: {
-                primary: colors.primary,
+                primary: colors.error,
               },
             }}
+            textColor={colors.error}
           >
             Cancel
           </Button>
@@ -255,7 +249,7 @@ export default function PaymentConfirmScreen({ route, navigation }) {
             loading={isProcessing}
             disabled={isProcessing || expiryStatus.status === 'expired'}
             style={styles.confirmButton}
-            contentStyle={styles.buttonContent}
+            contentStyle={styles.confirmButtonContent}
             theme={{
               colors: {
                 primary: colors.primary,
@@ -281,6 +275,40 @@ export default function PaymentConfirmScreen({ route, navigation }) {
         </Card>
       </View>
     </ScrollView>
+
+      {/* Custom Confirmation Dialog */}
+      {showConfirmDialog && (
+        <View style={styles.overlay}>
+          <View style={styles.confirmationDialog}>
+            <Text style={styles.dialogTitle}>Confirm Payment</Text>
+            <Text style={styles.dialogMessage}>
+              Are you sure you want to pay N$ {paymentRequest.amount.toFixed(2)} to {paymentRequest.senderName}?
+            </Text>
+            <View style={styles.dialogButtons}>
+              <Button
+                mode="outlined"
+                onPress={cancelPayment}
+                style={styles.cancelButton}
+                contentStyle={styles.cancelButtonContent}
+                textColor={colors.error}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={confirmPayment}
+                style={styles.confirmButton}
+                contentStyle={styles.confirmButtonContent}
+                buttonColor={colors.primary}
+                textColor={colors.white}
+              >
+                Confirm
+              </Button>
+            </View>
+          </View>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -483,12 +511,23 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 0.48,
+    borderColor: colors.error,
+    borderWidth: 1,
+    borderRadius: 28,
   },
   confirmButton: {
     flex: 0.48,
   },
   buttonContent: {
     paddingVertical: spacing.sm,
+  },
+  confirmButtonContent: {
+    paddingVertical: spacing.sm,
+    justifyContent: 'center',
+  },
+  cancelButtonContent: {
+    paddingVertical: spacing.sm,
+    justifyContent: 'center',
   },
   securityHeader: {
     flexDirection: 'row',
@@ -505,5 +544,51 @@ const styles = StyleSheet.create({
     fontSize: typography.caption.fontSize,
     color: colors.textSecondary,
     lineHeight: typography.caption.lineHeight,
+  },
+  // Custom Dialog Styles
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  confirmationDialog: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: spacing.lg,
+    margin: spacing.lg,
+    minWidth: 280,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  dialogTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  dialogMessage: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  dialogButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  confirmButton: {
+    flex: 1,
   },
 });

@@ -18,6 +18,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { qrAPI } from '../../config/api';
 import { colors, spacing } from '../../styles/theme';
+import toastService from '../../services/toastService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -39,7 +40,7 @@ export default function QRScanScreen({ navigation }) {
       const qrData = JSON.parse(data);
       
       if (qrData.type !== 'payment_request') {
-        Alert.alert('Invalid QR Code', 'This is not a valid payment request QR code.');
+        toastService.error('Invalid QR Code', 'This is not a valid payment request QR code.');
         setIsProcessing(false);
         return;
       }
@@ -59,10 +60,7 @@ export default function QRScanScreen({ navigation }) {
 
     } catch (error) {
       console.error('QR scan error:', error);
-      Alert.alert(
-        'Scan Error',
-        error.response?.data?.error || 'Failed to process QR code. Please try again.'
-      );
+      toastService.error('Scan Error', error.response?.data?.error || 'Failed to process QR code. Please try again.');
     } finally {
       setIsProcessing(false);
     }
