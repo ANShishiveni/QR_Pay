@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '../utils/asyncStorage';
 
 // Base API configuration
-const API_BASE_URL = 'http://192.168.0.132:3000'; // Your computer's IP address
+const API_BASE_URL = 'http://10.150.26.10:3000'; // Your computer's IP address
 
 // Test API connection
 console.log('🔗 API Base URL:', API_BASE_URL);

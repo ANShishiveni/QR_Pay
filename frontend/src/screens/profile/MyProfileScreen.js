@@ -24,6 +24,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { userAPI } from '../../config/api';
 import { theme, colors, spacing } from '../../styles/theme';
 import { useAuth } from '../../context/AuthContext';
+import toastService from '../../services/toastService';
 
 export default function MyProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -56,7 +57,7 @@ export default function MyProfileScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading user data:', error);
-      Alert.alert('Error', 'Failed to load profile data');
+      toastService.error('Error', 'Failed to load profile data');
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +65,7 @@ export default function MyProfileScreen({ navigation }) {
 
   const handleUpdateProfile = async () => {
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
-      Alert.alert('Error', 'First name and last name are required');
+      toastService.error('Validation Error', 'First name and last name are required');
       return;
     }
 
@@ -73,10 +74,10 @@ export default function MyProfileScreen({ navigation }) {
       const response = await userAPI.updateProfile(formData);
       setUserData(response.data.user);
       setEditMode(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      toastService.success('Success', 'Profile updated successfully');
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
+      toastService.error('Error', 'Failed to update profile');
     } finally {
       setIsUpdating(false);
     }
@@ -86,7 +87,7 @@ export default function MyProfileScreen({ navigation }) {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant permission to access your photo library');
+        toastService.error('Permission Required', 'Please grant permission to access your photo library');
         return;
       }
 
@@ -107,21 +108,21 @@ export default function MyProfileScreen({ navigation }) {
         
         reader.onloadend = async () => {
           const base64 = reader.result;
-          try {
-            await userAPI.uploadPhoto({ photo: base64 });
-            Alert.alert('Success', 'Profile photo updated successfully');
-            loadUserData(); // Reload to get updated photo
-          } catch (error) {
-            console.error('Error uploading photo:', error);
-            Alert.alert('Error', 'Failed to update profile photo');
-          }
+            try {
+              await userAPI.uploadPhoto({ photo: base64 });
+              toastService.success('Success', 'Profile photo updated successfully');
+              loadUserData(); // Reload to get updated photo
+            } catch (error) {
+              console.error('Error uploading photo:', error);
+              toastService.error('Error', 'Failed to update profile photo');
+            }
         };
         
         reader.readAsDataURL(blob);
       }
     } catch (error) {
       console.error('Error selecting photo:', error);
-      Alert.alert('Error', 'Failed to select photo');
+      toastService.error('Error', 'Failed to select photo');
     }
   };
 

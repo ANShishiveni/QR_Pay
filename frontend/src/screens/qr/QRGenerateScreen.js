@@ -23,6 +23,7 @@ import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { qrAPI } from '../../config/api';
 import { colors, spacing } from '../../styles/theme';
+import toastService from '../../services/toastService';
 
 export default function QRGenerateScreen({ navigation }) {
   const [amount, setAmount] = useState('');
@@ -34,12 +35,12 @@ export default function QRGenerateScreen({ navigation }) {
 
   const handleGenerateQR = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      toastService.error('Validation Error', 'Please enter a valid amount');
       return;
     }
 
     if (!reference.trim()) {
-      Alert.alert('Error', 'Please enter a reference for this transaction');
+      toastService.error('Validation Error', 'Please enter a reference for this transaction');
       return;
     }
 
@@ -56,18 +57,11 @@ export default function QRGenerateScreen({ navigation }) {
       setQrCodeData(response.data.qrCode);
       setPaymentRequest(response.data.paymentRequest);
 
-      Alert.alert(
-        'QR Code Generated',
-        'Your payment request QR code has been generated successfully!',
-        [{ text: 'OK' }]
-      );
+      toastService.success('QR Code Generated', 'Your payment request QR code has been generated successfully!');
     } catch (error) {
       console.error('Generate QR error:', error);
       setQrCodeError(error.response?.data?.error || 'Failed to generate QR code');
-      Alert.alert(
-        'Error',
-        error.response?.data?.error || 'Failed to generate QR code'
-      );
+      toastService.error('Generation Failed', error.response?.data?.error || 'Failed to generate QR code');
     } finally {
       setIsGenerating(false);
     }
@@ -80,7 +74,7 @@ export default function QRGenerateScreen({ navigation }) {
       // Request media library permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'We need access to your media library to save and share the QR code image.');
+        toastService.error('Permission Required', 'We need access to your media library to save and share the QR code image.');
         return;
       }
 
@@ -109,7 +103,7 @@ export default function QRGenerateScreen({ navigation }) {
 
     } catch (error) {
       console.error('Share error:', error);
-      Alert.alert('Share Error', 'Failed to share QR code. Please try again.');
+      toastService.error('Share Error', 'Failed to share QR code. Please try again.');
     }
   };
 

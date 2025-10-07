@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { authAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
+import toastService from '../../services/toastService';
 import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterScreen({ navigation }) {
@@ -43,23 +44,23 @@ export default function RegisterScreen({ navigation }) {
     const { firstName, lastName, email, password, confirmPassword } = formData;
 
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      toastService.error('Validation Error', 'Please fill in all fields');
       return false;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      toastService.error('Validation Error', 'Passwords do not match');
       return false;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      toastService.error('Validation Error', 'Password must be at least 6 characters long');
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      toastService.error('Validation Error', 'Please enter a valid email address');
       return false;
     }
 
@@ -89,22 +90,7 @@ export default function RegisterScreen({ navigation }) {
       // Show success message
       console.log('🎉 Registration successful! Navigating to home...');
       
-      if (Platform.OS === 'web') {
-        alert('Registration Successful! Your account has been created successfully!');
-      } else {
-        Alert.alert(
-          'Registration Successful',
-          'Your account has been created successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigation will be handled by AuthContext
-              },
-            },
-          ]
-        );
-      }
+      toastService.success('Account Created!', 'Registration successful');
     } catch (error) {
       console.error('❌ Registration error details:', {
         message: error.message,
@@ -118,14 +104,7 @@ export default function RegisterScreen({ navigation }) {
       const errorMessage = error.response?.data?.error || error.message || 'An error occurred during registration';
       console.error('❌ Registration failed:', errorMessage);
       
-      if (Platform.OS === 'web') {
-        alert(`Registration Failed: ${errorMessage}`);
-      } else {
-        Alert.alert(
-          'Registration Failed',
-          errorMessage
-        );
-      }
+      toastService.error('Registration Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }

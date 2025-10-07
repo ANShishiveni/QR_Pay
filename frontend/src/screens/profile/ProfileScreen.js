@@ -23,10 +23,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { userAPI } from '../../config/api';
 import { theme, colors, spacing } from '../../styles/theme';
 import { useAuth } from '../../context/AuthContext';
+import toastService from '../../services/toastService';
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -61,30 +63,23 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: performLogout,
-        },
-      ]
-    );
+    setShowLogoutConfirm(true);
   };
 
-  const performLogout = async () => {
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false);
     try {
       await logout();
+      toastService.success('Logged Out', 'You have been successfully logged out');
       console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout error:', error);
+      toastService.error('Logout Failed', 'An error occurred during logout');
     }
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
   };
 
   if (isLoading) {
@@ -170,7 +165,7 @@ export default function ProfileScreen({ navigation }) {
               description="Get help and contact support"
               left={(props) => <Ionicons name="help-circle" size={24} color={colors.primary} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => Alert.alert('Help & Support', 'For support, please contact us at support@nampay.com')}
+              onPress={() => toastService.info('Help & Support', 'For support, please contact us at support@nampay.com')}
               style={styles.menuItem}
             />
             <Divider />
@@ -204,6 +199,35 @@ export default function ProfileScreen({ navigation }) {
           </Card.Content>
         </Card>
       </View>
+
+      {/* Custom Logout Confirmation Dialog */}
+      {showLogoutConfirm && (
+        <View style={styles.overlay}>
+          <View style={styles.confirmationDialog}>
+            <Text style={styles.dialogTitle}>Logout</Text>
+            <Text style={styles.dialogMessage}>Are you sure you want to logout?</Text>
+            <View style={styles.dialogButtons}>
+              <Button
+                mode="outlined"
+                onPress={cancelLogout}
+                style={styles.cancelButton}
+                textColor={colors.textSecondary}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={confirmLogout}
+                style={styles.logoutButton}
+                buttonColor={colors.error}
+                textColor={colors.white}
+              >
+                Logout
+              </Button>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -297,20 +321,54 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.xs,
   },
-  logoutButton: {
-    marginTop: spacing.lg,
-    borderColor: colors.error,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // Custom Dialog Styles
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
-  buttonIcon: {
-    marginRight: 8,
+  confirmationDialog: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: spacing.lg,
+    margin: spacing.lg,
+    minWidth: 280,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  buttonText: {
+  dialogTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  dialogMessage: {
     fontSize: 16,
-    fontWeight: '500',
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  dialogButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  cancelButton: {
+    flex: 1,
+    borderColor: colors.border,
+  },
+  logoutButton: {
+    flex: 1,
   },
 });

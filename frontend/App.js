@@ -7,6 +7,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import Toast from 'react-native-toast-message';
 
 // Import screens
 import LoginScreen from './src/screens/auth/LoginScreen';
@@ -108,6 +109,7 @@ export default function App() {
     <PaperProvider theme={theme}>
       <AuthProvider>
         <AppContent />
+        <Toast />
       </AuthProvider>
     </PaperProvider>
   );
