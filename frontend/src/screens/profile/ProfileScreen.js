@@ -47,8 +47,8 @@ export default function ProfileScreen({ navigation }) {
       if (user) {
         // Load fresh profile data from API to get photo URL
         const response = await userAPI.getProfile();
-        console.log('📸 Profile data loaded:', response.data.user);
-        console.log('📸 Photo URL:', response.data.user.photoUrl);
+        console.log('Profile data loaded:', response.data.user);
+        console.log('Photo URL:', response.data.user.photoUrl);
         setUserData(response.data.user);
       }
     } catch (error) {
@@ -71,7 +71,7 @@ export default function ProfileScreen({ navigation }) {
     try {
       await logout();
       toastService.success('Logged Out', 'You have been successfully logged out');
-      console.log('✅ Logout successful');
+      console.log('Logout successful');
     } catch (error) {
       console.error('Logout error:', error);
       toastService.error('Logout Failed', 'An error occurred during logout');
@@ -101,17 +101,17 @@ export default function ProfileScreen({ navigation }) {
         <View style={styles.headerContent}>
           {userData?.photoUrl ? (
             <>
-              {console.log('🖼️ Rendering photo with URL:', userData.photoUrl)}
+              {console.log('Rendering photo with URL:', userData.photoUrl)}
               <Image 
                 source={{ uri: userData.photoUrl }} 
                 style={styles.profilePhoto}
-                onError={(error) => console.log('❌ Image load error:', error)}
-                onLoad={() => console.log('✅ Image loaded successfully')}
+                onError={(error) => console.log('Image load error:', error)}
+                onLoad={() => console.log(' Image loaded successfully')}
               />
             </>
           ) : (
             <>
-              {console.log('👤 No photo URL, showing avatar with initials:', `${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`)}
+              {console.log(' No photo URL, showing avatar with initials:', `${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`)}
               <Avatar.Text
                 size={80}
                 label={`${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`}
@@ -136,7 +136,7 @@ export default function ProfileScreen({ navigation }) {
             <List.Item
               title="My Profile"
               description="Update your details and profile photo"
-              left={(props) => <Ionicons name="person" size={24} color={colors.primary} />}
+              left={(props) => <Ionicons name="person" size={24} color={colors.black} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('MyProfile')}
               style={styles.menuItem}
@@ -145,7 +145,7 @@ export default function ProfileScreen({ navigation }) {
             <List.Item
               title="My Cards"
               description="Manage your linked payment cards"
-              left={(props) => <Ionicons name="card" size={24} color={colors.primary} />}
+              left={(props) => <Ionicons name="card" size={24} color={colors.black} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('Cards')}
               style={styles.menuItem}
@@ -154,21 +154,12 @@ export default function ProfileScreen({ navigation }) {
             <List.Item
               title="Settings"
               description="Change password and app preferences"
-              left={(props) => <Ionicons name="settings" size={24} color={colors.primary} />}
+              left={(props) => <Ionicons name="settings" size={24} color={colors.black} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('Settings')}
               style={styles.menuItem}
             />
-            <Divider />
-            <List.Item
-              title="Help & Support"
-              description="Get help and contact support"
-              left={(props) => <Ionicons name="help-circle" size={24} color={colors.primary} />}
-              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => toastService.info('Help & Support', 'For support, please contact us at support@nampay.com')}
-              style={styles.menuItem}
-            />
-            <Divider />
+            
             <List.Item
               title="Logout"
               description="Sign out of your account"
@@ -186,7 +177,7 @@ export default function ProfileScreen({ navigation }) {
             <Title style={styles.cardTitle}>About This App</Title>
             <Paragraph style={styles.infoText}>
               QR Money Transfer is a prototype application designed to demonstrate 
-              cross-bank money transfers in Namibia using QR codes and Visa card integration.
+              cross-bank money transfers in Namibia using QR codes.
             </Paragraph>
             <Paragraph style={styles.infoText}>
               This application uses sandbox APIs for demonstration purposes and is not 
@@ -194,7 +185,7 @@ export default function ProfileScreen({ navigation }) {
             </Paragraph>
             <View style={styles.versionInfo}>
               <Text style={styles.versionText}>Version 1.0.0</Text>
-              <Text style={styles.versionText}>© 2024 QR Money Transfer</Text>
+              <Text style={styles.versionText}>© 2025 QR Money Transfer</Text>
             </View>
           </Card.Content>
         </Card>

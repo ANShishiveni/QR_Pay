@@ -169,7 +169,7 @@ export default function MyProfileScreen({ navigation }) {
             <List.Item
               title="Change Profile Photo"
               description="Update your profile picture"
-              left={(props) => <Ionicons name="camera" size={24} color={colors.primary} />}
+              left={(props) => <Ionicons name="camera" size={24} color={colors.black} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={handleChangePhoto}
               style={styles.menuItem}
@@ -178,7 +178,7 @@ export default function MyProfileScreen({ navigation }) {
             <List.Item
               title={editMode ? "Cancel Edit" : "Update Details"}
               description={editMode ? "Cancel editing" : "Edit your personal information"}
-              left={(props) => <Ionicons name={editMode ? "close" : "create"} size={24} color={colors.primary} />}
+              left={(props) => <Ionicons name={editMode ? "close" : "create"} size={24} color={colors.black} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => setEditMode(!editMode)}
               style={styles.menuItem}

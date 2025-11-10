@@ -309,24 +309,6 @@ export default function CardsScreen({ navigation }) {
           </Card>
         )}
 
-        {/* Test Cards Info */}
-        <Card style={styles.testCard}>
-          <Card.Content>
-            <Title style={styles.testTitle}>Test Cards</Title>
-            <Paragraph style={styles.testText}>
-              For testing purposes, you can use these test card numbers:
-            </Paragraph>
-            <View style={styles.testCardsList}>
-              <Text style={styles.testCardItem}>• FNB: 4242424242424242</Text>
-              <Text style={styles.testCardItem}>• Standard Bank: 4000056655665556</Text>
-              <Text style={styles.testCardItem}>• Bank Windhoek: 5555555555554444</Text>
-              <Text style={styles.testCardItem}>• Nedbank: 2223003122003222</Text>
-            </View>
-            <Paragraph style={styles.testNote}>
-              Use any future expiry date and any 3-digit CVC.
-            </Paragraph>
-          </Card.Content>
-        </Card>
       </ScrollView>
 
       {/* Add Card Modal */}

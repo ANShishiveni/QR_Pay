@@ -167,19 +167,19 @@ export default function QRScanScreen({ navigation }) {
         <Card.Content>
           <Title style={styles.instructionsTitle}>How to scan:</Title>
           <View style={styles.instructionItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={20} color={colors.black} />
             <Text style={styles.instructionText}>
               Position the QR code within the frame above
             </Text>
           </View>
           <View style={styles.instructionItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={20} color={colors.black} />
             <Text style={styles.instructionText}>
               Make sure the QR code is clearly visible
             </Text>
           </View>
           <View style={styles.instructionItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={20} color={colors.black} />
             <Text style={styles.instructionText}>
               The app will automatically detect and process the code
             </Text>

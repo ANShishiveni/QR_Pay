@@ -264,7 +264,7 @@ export default function QRGenerateScreen({ navigation }) {
               >
                 <View style={styles.buttonContent}>
                   <Ionicons name="share" size={20} color={colors.white} style={styles.buttonIcon} />
-                  <Text style={styles.shareButtonText}>Share QR Code</Text>
+                  <Text style={styles.shareButtonText}>Share</Text>
                 </View>
               </Button>
 
@@ -280,7 +280,7 @@ export default function QRGenerateScreen({ navigation }) {
               >
                 <View style={styles.buttonContent}>
                   <Ionicons name="refresh" size={20} color={colors.white} style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Generate New</Text>
+                  <Text style={styles.buttonText}>Regenerate</Text>
                 </View>
               </Button>
             </View>
@@ -290,25 +290,25 @@ export default function QRGenerateScreen({ navigation }) {
               <Card.Content>
                 <Title style={styles.instructionsTitle}>How to use:</Title>
                 <View style={styles.instructionItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={20} color={colors.black} />
                   <Text style={styles.instructionText}>
                     Show this QR code to the person who needs to pay you
                   </Text>
                 </View>
                 <View style={styles.instructionItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={20} color={colors.black} />
                   <Text style={styles.instructionText}>
                     They can scan it with their phone camera or QR scanner
                   </Text>
                 </View>
                 <View style={styles.instructionItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={20} color={colors.black} />
                   <Text style={styles.instructionText}>
                     The payment will be processed automatically
                   </Text>
                 </View>
                 <View style={styles.instructionItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={20} color={colors.black} />
                   <Text style={styles.instructionText}>
                     You'll receive a notification when payment is complete
                   </Text>

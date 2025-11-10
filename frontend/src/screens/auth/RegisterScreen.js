@@ -37,11 +37,16 @@ export default function RegisterScreen({ navigation }) {
   const { login } = useAuth();
 
   const handleInputChange = (field, value) => {
+    // Limit phone number length to prevent excessive input
+    if (field === 'phoneNumber' && value.length > 13) {
+      toastService.error('Phone Number Too Long', 'Please enter a valid phone number (max 13 digits)');
+      return;
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const validateForm = () => {
-    const { firstName, lastName, email, password, confirmPassword } = formData;
+    const { firstName, lastName, email, password, confirmPassword, phoneNumber } = formData;
 
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
       toastService.error('Validation Error', 'Please fill in all fields');
@@ -62,6 +67,23 @@ export default function RegisterScreen({ navigation }) {
     if (!emailRegex.test(email)) {
       toastService.error('Validation Error', 'Please enter a valid email address');
       return false;
+    }
+
+    // Validate phone number if provided
+    if (phoneNumber && phoneNumber.trim()) {
+      // Remove all non-digit characters for validation
+      const digitsOnly = phoneNumber.replace(/\D/g, '');
+      
+      // Check if phone number has reasonable length (7-15 digits)
+      if (digitsOnly.length < 7) {
+        toastService.error('Validation Error', 'Phone number must be at least 7 digits');
+        return false;
+      }
+      
+      if (digitsOnly.length > 15) {
+        toastService.error('Validation Error', 'Phone number cannot exceed 15 digits');
+        return false;
+      }
     }
 
     return true;
@@ -173,11 +195,13 @@ export default function RegisterScreen({ navigation }) {
               />
 
               <TextInput
-                label="Phone Number (Optional)"
+                label="Phone Number"
                 value={formData.phoneNumber}
                 onChangeText={(value) => handleInputChange('phoneNumber', value)}
                 mode="outlined"
                 keyboardType="phone-pad"
+                maxLength={13}
+                placeholder="e.g., +264 81 234 567"
                 style={styles.input}
                 theme={{
                   colors: {

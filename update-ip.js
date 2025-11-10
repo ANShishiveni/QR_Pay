@@ -50,9 +50,9 @@ function updateFrontendConfig(ip) {
     );
     
     fs.writeFileSync(frontendConfigPath, content, 'utf8');
-    console.log(`✅ Updated frontend API config: http://${ip}:3000`);
+    console.log(`Updated frontend API config: http://${ip}:3000`);
   } catch (error) {
-    console.error('❌ Error updating frontend config:', error.message);
+    console.error('Error updating frontend config:', error.message);
   }
 }
 
@@ -85,9 +85,9 @@ function updateBackendConfig(ip) {
     );
     
     fs.writeFileSync(backendConfigPath, content, 'utf8');
-    console.log(`✅ Updated backend CORS config for IP: ${ip}`);
+    console.log(`Updated backend CORS config for IP: ${ip}`);
   } catch (error) {
-    console.error('❌ Error updating backend config:', error.message);
+    console.error('Error updating backend config:', error.message);
   }
 }
 
@@ -99,42 +99,42 @@ function updateServerMessage(ip) {
     let content = fs.readFileSync(backendConfigPath, 'utf8');
     
     // Update the network access message
-    const newMessage = `  console.log(\`🌐 Network access: http://${ip}:\${PORT}/api/health\`);`;
+    const newMessage = `  console.log(\` Network access: http://${ip}:\${PORT}/api/health\`);`;
     content = content.replace(
-      /console\.log\(`🌐 Network access: http:\/\/[^`]+:\$\{PORT\}\/api\/health`\);/,
+      /console\.log\(` Network access: http:\/\/[^`]+:\$\{PORT\}\/api\/health`\);/,
       newMessage
     );
     
     fs.writeFileSync(backendConfigPath, content, 'utf8');
-    console.log(`✅ Updated server message for IP: ${ip}`);
+    console.log(`Updated server message for IP: ${ip}`);
   } catch (error) {
-    console.error('❌ Error updating server message:', error.message);
+    console.error('Error updating server message:', error.message);
   }
 }
 
 // Main function
 function main() {
-  console.log('🔍 Detecting current network IP address...');
+  console.log('Detecting current network IP address...');
   
   const currentIP = getCurrentIP();
   
   if (currentIP === 'localhost') {
-    console.log('⚠️  Could not detect network IP, using localhost');
+    console.log('Could not detect network IP, using localhost');
     console.log('   Make sure you are connected to a network');
     return;
   }
   
-  console.log(`🌐 Current IP address: ${currentIP}`);
-  console.log('📝 Updating configuration files...');
+  console.log(`Current IP address: ${currentIP}`);
+  console.log('Updating configuration files...');
   
   // Update all configuration files
   updateFrontendConfig(currentIP);
   updateBackendConfig(currentIP);
   updateServerMessage(currentIP);
   
-  console.log('🎉 IP address update complete!');
-  console.log(`📱 Use this URL in Expo Go: exp://${currentIP}:8081`);
-  console.log(`🌐 Backend accessible at: http://${currentIP}:3000`);
+  console.log('IP address update complete!');
+  console.log(`Use this URL in Expo Go: exp://${currentIP}:8081`);
+  console.log(`Backend accessible at: http://${currentIP}:3000`);
 }
 
 // Run the script

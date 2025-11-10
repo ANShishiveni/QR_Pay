@@ -201,33 +201,6 @@ const SettingsScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Authentication Settings Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Authentication Settings</Text>
-          
-          {/* SMS OTP */}
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Ionicons name="chatbubble" size={24} color={colors.primary} />
-              <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>SMS OTP</Text>
-                <Text style={styles.settingDescription}>
-                  Receive verification codes via SMS for secure payments
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={authSettings.smsEnabled}
-              onValueChange={(enabled) => {
-                setAuthSettings(prev => ({ ...prev, smsEnabled: enabled }));
-                mfaService.updatePreferences({ smsEnabled: enabled });
-              }}
-              disabled={loading}
-              trackColor={{ false: colors.gray, true: colors.primary }}
-              thumbColor={authSettings.smsEnabled ? colors.white : colors.lightGray}
-            />
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

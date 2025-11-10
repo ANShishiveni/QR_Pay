@@ -260,19 +260,6 @@ export default function PaymentConfirmScreen({ route, navigation }) {
           </Button>
         </View>
 
-        {/* Security Notice */}
-        <Card style={styles.securityCard}>
-          <Card.Content>
-            <View style={styles.securityHeader}>
-              <Ionicons name="shield-checkmark" size={20} color={colors.success} />
-              <Text style={styles.securityTitle}>Secure Payment</Text>
-            </View>
-            <Text style={styles.securityText}>
-              Your payment is protected by end-to-end encryption and processed through secure banking channels.
-              This is a prototype application using sandbox APIs for demonstration purposes.
-            </Text>
-          </Card.Content>
-        </Card>
       </View>
     </ScrollView>
 

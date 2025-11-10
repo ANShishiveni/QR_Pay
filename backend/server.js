@@ -9,7 +9,7 @@ try {
   const { initializeFirebase } = require('./config/firebase');
   initializeFirebase();
 } catch (error) {
-  console.error('❌ Failed to initialize Firebase:', error.message);
+  console.error('Failed to initialize Firebase:', error.message);
   console.error('Please check your .env file and Firebase configuration');
   process.exit(1);
 }
@@ -35,12 +35,12 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-                      origin: [
+                                            origin: [
     'http://localhost:3000',
     'http://localhost:19006',
     'http://127.0.0.1:19006',
-    'http://10.150.26.10:19006',
-    'exp://10.150.26.10:8081',
+    'http://10.155.77.10:19006',
+    'exp://10.155.77.10:8081',
     'http://10.139.208.10:19006',
     'exp://10.139.208.10:8081',
     'exp://192.168.1.100:19000',
@@ -86,7 +86,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-                      console.log(`🌐 Network access: http://10.150.26.10:${PORT}/api/health`);
+                                            console.log(`🌐 Network access: http://10.155.77.10:${PORT}/api/health`);
 });
 
 module.exports = app;
