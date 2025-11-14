@@ -66,6 +66,26 @@ STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 JWT_SECRET=your-jwt-secret
 ```
 
+For the frontend, configure the API host via environment for web builds:
+
+```
+EXPO_PUBLIC_API_URL=http://localhost:3000
+```
+
+The frontend will use `${EXPO_PUBLIC_API_URL}/api` automatically. For native builds, you can set `extra.apiUrl` in `app.json` and the app will use it:
+
+```
+{
+  "expo": {
+    "extra": {
+      "apiUrl": "http://your-machine-ip:3000"
+    }
+  }
+}
+```
+
+Security note: Secrets must not be committed to source control. Private key logging has been removed from the backend to avoid leaking sensitive material.
+
 ## Project Structure
 
 ```

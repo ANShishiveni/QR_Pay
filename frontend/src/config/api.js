@@ -1,15 +1,12 @@
 import axios from 'axios';
+import Constants from 'expo-constants';
 import AsyncStorage from '../utils/asyncStorage';
 
-// Base API configuration
-const API_BASE_URL = 'http://10.155.77.10:3000'; // Your computer's IP address
-
-// Test API connection
-console.log('🔗 API Base URL:', API_BASE_URL);
-fetch(`${API_BASE_URL}/api/health`)
-  .then(response => response.json())
-  .then(data => console.log('✅ Backend health check:', data))
-  .catch(error => console.error('❌ Backend health check failed:', error));
+// Base API configuration (env-driven with sensible fallback)
+const API_HOST = process.env.EXPO_PUBLIC_API_URL
+  || Constants?.expoConfig?.extra?.apiUrl
+  || 'http://localhost:3000';
+const API_BASE_URL = `${API_HOST}/api`;
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -23,8 +20,6 @@ const apiClient = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   async (config) => {
-    console.log('🚀 Making API request:', config.method?.toUpperCase(), config.url);
-    console.log('📦 Request data:', config.data);
     try {
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
@@ -35,25 +30,15 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    console.error('❌ Request interceptor error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
-  (response) => {
-    console.log('✅ API Response:', response.status, response.config.url);
-    console.log('📦 Response data:', response.data);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('❌ API Error:', error.response?.status, error.response?.data || error.message);
-    console.error('🔗 Failed URL:', error.config?.url);
     if (error.response?.status === 401) {
-      // Handle unauthorized access
-      console.log('Unauthorized access, redirecting to login');
+      // Handle unauthorized access (optional: trigger logout)
     }
     return Promise.reject(error);
   }
@@ -61,47 +46,47 @@ apiClient.interceptors.response.use(
 
 // Auth API endpoints
 export const authAPI = {
-  login: (credentials) => apiClient.post('/api/auth/login', credentials),
-  register: (userData) => apiClient.post('/api/auth/register', userData),
-  logout: () => apiClient.post('/api/auth/logout'),
-  verifyToken: () => apiClient.get('/api/auth/verify'),
+  login: (credentials) => apiClient.post('/auth/login', credentials),
+  register: (userData) => apiClient.post('/auth/register', userData),
+  logout: () => apiClient.post('/auth/logout'),
+  verifyToken: () => apiClient.get('/auth/verify'),
 };
 
 // User API endpoints
 export const userAPI = {
-  getProfile: () => apiClient.get('/api/users/profile'),
-  updateProfile: (data) => apiClient.put('/api/users/profile', data),
-  getTransactions: (params) => apiClient.get('/api/users/transactions', { params }),
-  getBalance: () => apiClient.get('/api/users/balance'),
-  getStats: () => apiClient.get('/api/users/stats'),
-  uploadPhoto: (data) => apiClient.post('/api/users/photo', data),
-  changePassword: (passwordData) => apiClient.put('/api/users/password', passwordData),
+  getProfile: () => apiClient.get('/users/profile'),
+  updateProfile: (data) => apiClient.put('/users/profile', data),
+  getTransactions: (params) => apiClient.get('/users/transactions', { params }),
+  getBalance: () => apiClient.get('/users/balance'),
+  getStats: () => apiClient.get('/users/stats'),
+  uploadPhoto: (data) => apiClient.post('/users/photo', data),
+  changePassword: (passwordData) => apiClient.put('/users/password', passwordData),
 };
 
 // Payment API endpoints
 export const paymentAPI = {
-  getCards: () => apiClient.get('/api/payments/cards'),
-  addCard: (cardData) => apiClient.post('/api/payments/link-card', cardData),
-  removeCard: (cardId) => apiClient.delete(`/api/payments/remove-card/${cardId}`),
-  setDefaultCard: (cardId) => apiClient.put(`/api/payments/set-default-card/${cardId}`),
-  makePayment: (paymentData) => apiClient.post('/api/payments/process-payment', paymentData),
-  getPaymentHistory: () => apiClient.get('/api/payments/history'),
+  getCards: () => apiClient.get('/payments/cards'),
+  addCard: (cardData) => apiClient.post('/payments/link-card', cardData),
+  removeCard: (cardId) => apiClient.delete(`/payments/remove-card/${cardId}`),
+  setDefaultCard: (cardId) => apiClient.put(`/payments/set-default-card/${cardId}`),
+  makePayment: (paymentData) => apiClient.post('/payments/process-payment', paymentData),
+  getPaymentHistory: () => apiClient.get('/payments/history'),
 };
 
 // QR API endpoints
 export const qrAPI = {
-  generateQR: (data) => apiClient.post('/api/qr/generate', data),
-  scanQR: (qrData) => apiClient.post('/api/qr/scan', qrData),
-  confirmPayment: (paymentData) => apiClient.post('/api/qr/confirm-payment', paymentData),
-  getQRHistory: () => apiClient.get('/api/qr/history'),
+  generateQR: (data) => apiClient.post('/qr/generate', data),
+  scanQR: (qrData) => apiClient.post('/qr/scan', qrData),
+  confirmPayment: (paymentData) => apiClient.post('/qr/confirm-payment', paymentData),
+  getQRHistory: () => apiClient.get('/qr/history'),
 };
 
 // OTP API endpoints
 export const otpAPI = {
-  sendOTP: (phoneNumber, purpose) => apiClient.post('/api/otp/send', { phoneNumber, purpose }),
-  verifyOTP: (sessionId, otp) => apiClient.post('/api/otp/verify', { sessionId, otp }),
-  resendOTP: (phoneNumber, purpose) => apiClient.post('/api/otp/resend', { phoneNumber, purpose }),
-  getOTPStatus: (sessionId) => apiClient.get(`/api/otp/status/${sessionId}`),
+  sendOTP: (phoneNumber, purpose) => apiClient.post('/otp/send', { phoneNumber, purpose }),
+  verifyOTP: (sessionId, otp) => apiClient.post('/otp/verify', { sessionId, otp }),
+  resendOTP: (phoneNumber, purpose) => apiClient.post('/otp/resend', { phoneNumber, purpose }),
+  getOTPStatus: (sessionId) => apiClient.get(`/otp/status/${sessionId}`),
 };
 
 export default apiClient;

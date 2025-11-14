@@ -9,20 +9,12 @@ const initializeFirebase = () => {
       throw new Error('Firebase environment variables not found');
     }
 
-    // Fix private key formatting
+    // Fix private key formatting (avoid logging sensitive material)
     let privateKey = process.env.FIREBASE_PRIVATE_KEY;
     if (privateKey) {
-      console.log(' Original private key length:', privateKey.length);
-      console.log(' First 50 chars:', privateKey.substring(0, 50));
-      
-      // Replace literal \n with actual newlines
+      // Replace literal \n with actual newlines and strip wrapping quotes
       privateKey = privateKey.replace(/\\n/g, '\n');
-      // Remove any extra quotes if present
       privateKey = privateKey.replace(/^["']|["']$/g, '');
-      
-      console.log(' After formatting length:', privateKey.length);
-      console.log(' First 50 chars after formatting:', privateKey.substring(0, 50));
-      console.log(' Private key formatted successfully');
     } else {
       console.error(' FIREBASE_PRIVATE_KEY not found in environment variables');
       throw new Error('FIREBASE_PRIVATE_KEY not found');
