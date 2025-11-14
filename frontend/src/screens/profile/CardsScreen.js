@@ -27,6 +27,7 @@ import {
   getCardType 
 } from '../../utils/cardValidation';
 import { theme, colors, spacing, typography } from '../../styles/theme';
+import toastService from '../../services/toastService';
 
 export default function CardsScreen({ navigation }) {
   const [cards, setCards] = useState([]);
@@ -51,7 +52,7 @@ export default function CardsScreen({ navigation }) {
       setCards(response.data.cards);
     } catch (error) {
       console.error('Error loading cards:', error);
-      Alert.alert('Error', 'Failed to load cards');
+      toastService.error('Error', 'Failed to load cards');
     } finally {
       setIsLoading(false);
     }
@@ -72,13 +73,10 @@ export default function CardsScreen({ navigation }) {
         cardholderName: '',
       });
       await loadCards();
-      Alert.alert('Success', 'Card added successfully!');
+      toastService.success('Success', 'Card added successfully!');
     } catch (error) {
       console.error('Add card error:', error);
-      Alert.alert(
-        'Error',
-        error.response?.data?.error || 'Failed to add card'
-      );
+      toastService.error('Error', error.response?.data?.error || 'Failed to add card');
     } finally {
       setIsAddingCard(false);
     }
@@ -88,7 +86,7 @@ export default function CardsScreen({ navigation }) {
     const validation = validateCard(newCard);
     
     if (!validation.isValid) {
-      Alert.alert('Validation Error', validation.errors.join('\n'));
+      toastService.error('Validation Error', validation.errors.join('\n'));
       return false;
     }
 
@@ -132,39 +130,39 @@ export default function CardsScreen({ navigation }) {
     try {
       await paymentAPI.setDefaultCard(cardId);
       await loadCards();
-      Alert.alert('Success', 'Default card updated successfully!');
+      toastService.success('Success', 'Default card updated successfully!');
     } catch (error) {
       console.error('Set default card error:', error);
-      Alert.alert('Error', 'Failed to update default card');
+      toastService.error('Error', 'Failed to update default card');
     }
   };
 
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [cardToRemove, setCardToRemove] = useState(null);
+
   const handleRemoveCard = (cardId, cardInfo) => {
-    Alert.alert(
-      'Remove Card',
-      `Are you sure you want to remove the ${cardInfo.brand} card ending in ${cardInfo.last4}?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => performRemoveCard(cardId),
-        },
-      ]
-    );
+    setCardToRemove({ id: cardId, info: cardInfo });
+    setShowRemoveConfirm(true);
   };
 
-  const performRemoveCard = async (cardId) => {
+  const cancelRemove = () => {
+    setShowRemoveConfirm(false);
+    setCardToRemove(null);
+  };
+
+  const confirmRemoveCard = async () => {
+    if (!cardToRemove) return;
+    
+    setShowRemoveConfirm(false);
     try {
-      await paymentAPI.removeCard(cardId);
+      await paymentAPI.removeCard(cardToRemove.id);
       await loadCards();
-      Alert.alert('Success', 'Card removed successfully!');
+      toastService.success('Success', 'Card removed successfully!');
     } catch (error) {
       console.error('Remove card error:', error);
-      Alert.alert('Error', 'Failed to remove card');
+      toastService.error('Error', 'Failed to remove card');
+    } finally {
+      setCardToRemove(null);
     }
   };
 
@@ -213,7 +211,6 @@ export default function CardsScreen({ navigation }) {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Ionicons name="card" size={32} color={colors.white} />
           <Title style={styles.headerTitle}>My Cards</Title>
           <Paragraph style={styles.headerSubtitle}>
             Manage your payment cards
@@ -312,24 +309,6 @@ export default function CardsScreen({ navigation }) {
           </Card>
         )}
 
-        {/* Test Cards Info */}
-        <Card style={styles.testCard}>
-          <Card.Content>
-            <Title style={styles.testTitle}>Test Cards</Title>
-            <Paragraph style={styles.testText}>
-              For testing purposes, you can use these test card numbers:
-            </Paragraph>
-            <View style={styles.testCardsList}>
-              <Text style={styles.testCardItem}>• FNB: 4242424242424242</Text>
-              <Text style={styles.testCardItem}>• Standard Bank: 4000056655665556</Text>
-              <Text style={styles.testCardItem}>• Bank Windhoek: 5555555555554444</Text>
-              <Text style={styles.testCardItem}>• Nedbank: 2223003122003222</Text>
-            </View>
-            <Paragraph style={styles.testNote}>
-              Use any future expiry date and any 3-digit CVC.
-            </Paragraph>
-          </Card.Content>
-        </Card>
       </ScrollView>
 
       {/* Add Card Modal */}
@@ -452,6 +431,37 @@ export default function CardsScreen({ navigation }) {
           </Card.Content>
         </Card>
       </Modal>
+
+      {/* Custom Remove Confirmation Dialog */}
+      {showRemoveConfirm && cardToRemove && (
+        <View style={styles.overlay}>
+          <View style={styles.confirmationDialog}>
+            <Text style={styles.dialogTitle}>Remove Card</Text>
+            <Text style={styles.dialogMessage}>
+              Are you sure you want to remove the {cardToRemove.info.brand} card ending in {cardToRemove.info.last4}?
+            </Text>
+            <View style={styles.dialogButtons}>
+              <Button
+                mode="outlined"
+                onPress={cancelRemove}
+                style={styles.cancelButton}
+                textColor={colors.textSecondary}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={confirmRemoveCard}
+                style={styles.removeDialogButton}
+                buttonColor={colors.error}
+                textColor={colors.white}
+              >
+                Remove
+              </Button>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -648,5 +658,55 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 0.48,
+  },
+  // Custom Dialog Styles
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2000,
+  },
+  confirmationDialog: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: spacing.lg,
+    margin: spacing.lg,
+    minWidth: 280,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  dialogTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  dialogMessage: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  dialogButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  cancelButton: {
+    flex: 1,
+    borderColor: colors.border,
+  },
+  removeDialogButton: {
+    flex: 1,
   },
 });

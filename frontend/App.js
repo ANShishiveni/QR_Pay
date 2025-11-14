@@ -7,14 +7,18 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import Toast from 'react-native-toast-message';
 
 // Import screens
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
+import OTPVerificationScreen from './src/screens/auth/OTPVerificationScreen';
+import BiometricAuthScreen from './src/screens/auth/BiometricAuthScreen';
 import HomeScreen from './src/screens/main/HomeScreen';
 import QRGenerateScreen from './src/screens/qr/QRGenerateScreen';
 import QRScanScreen from './src/screens/qr/QRScanScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
+import MyProfileScreen from './src/screens/profile/MyProfileScreen';
 import CardsScreen from './src/screens/profile/CardsScreen';
 import TransactionsScreen from './src/screens/profile/TransactionsScreen';
 import SettingsScreen from './src/screens/profile/SettingsScreen';
@@ -83,8 +87,11 @@ function AppContent() {
             <Stack.Screen name="QRScan" component={QRScanScreen} />
             <Stack.Screen name="PaymentConfirm" component={PaymentConfirmScreen} />
             <Stack.Screen name="Cards" component={CardsScreen} />
+            <Stack.Screen name="MyProfile" component={MyProfileScreen} />
             <Stack.Screen name="Transactions" component={TransactionsScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
+            <Stack.Screen name="BiometricAuth" component={BiometricAuthScreen} />
           </>
         ) : (
           <>
@@ -102,6 +109,7 @@ export default function App() {
     <PaperProvider theme={theme}>
       <AuthProvider>
         <AppContent />
+        <Toast />
       </AuthProvider>
     </PaperProvider>
   );

@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { authAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
+import toastService from '../../services/toastService';
 import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterScreen({ navigation }) {
@@ -36,31 +37,53 @@ export default function RegisterScreen({ navigation }) {
   const { login } = useAuth();
 
   const handleInputChange = (field, value) => {
+    // Limit phone number length to prevent excessive input
+    if (field === 'phoneNumber' && value.length > 13) {
+      toastService.error('Phone Number Too Long', 'Please enter a valid phone number (max 13 digits)');
+      return;
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const validateForm = () => {
-    const { firstName, lastName, email, password, confirmPassword } = formData;
+    const { firstName, lastName, email, password, confirmPassword, phoneNumber } = formData;
 
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      toastService.error('Validation Error', 'Please fill in all fields');
       return false;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      toastService.error('Validation Error', 'Passwords do not match');
       return false;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      toastService.error('Validation Error', 'Password must be at least 6 characters long');
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      toastService.error('Validation Error', 'Please enter a valid email address');
       return false;
+    }
+
+    // Validate phone number if provided
+    if (phoneNumber && phoneNumber.trim()) {
+      // Remove all non-digit characters for validation
+      const digitsOnly = phoneNumber.replace(/\D/g, '');
+      
+      // Check if phone number has reasonable length (7-15 digits)
+      if (digitsOnly.length < 7) {
+        toastService.error('Validation Error', 'Phone number must be at least 7 digits');
+        return false;
+      }
+      
+      if (digitsOnly.length > 15) {
+        toastService.error('Validation Error', 'Phone number cannot exceed 15 digits');
+        return false;
+      }
     }
 
     return true;
@@ -89,22 +112,7 @@ export default function RegisterScreen({ navigation }) {
       // Show success message
       console.log('🎉 Registration successful! Navigating to home...');
       
-      if (Platform.OS === 'web') {
-        alert('Registration Successful! Your account has been created successfully!');
-      } else {
-        Alert.alert(
-          'Registration Successful',
-          'Your account has been created successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigation will be handled by AuthContext
-              },
-            },
-          ]
-        );
-      }
+      toastService.success('Account Created!', 'Registration successful');
     } catch (error) {
       console.error('❌ Registration error details:', {
         message: error.message,
@@ -118,14 +126,7 @@ export default function RegisterScreen({ navigation }) {
       const errorMessage = error.response?.data?.error || error.message || 'An error occurred during registration';
       console.error('❌ Registration failed:', errorMessage);
       
-      if (Platform.OS === 'web') {
-        alert(`Registration Failed: ${errorMessage}`);
-      } else {
-        Alert.alert(
-          'Registration Failed',
-          errorMessage
-        );
-      }
+      toastService.error('Registration Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -194,11 +195,13 @@ export default function RegisterScreen({ navigation }) {
               />
 
               <TextInput
-                label="Phone Number (Optional)"
+                label="Phone Number"
                 value={formData.phoneNumber}
                 onChangeText={(value) => handleInputChange('phoneNumber', value)}
                 mode="outlined"
                 keyboardType="phone-pad"
+                maxLength={13}
+                placeholder="e.g., +264 81 234 567"
                 style={styles.input}
                 theme={{
                   colors: {

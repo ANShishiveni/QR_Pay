@@ -23,6 +23,20 @@
         ".write": "auth != null"
       }
     },
+    "paymentRequests": {
+      ".indexOn": ["senderId", "status", "expiresAt"],
+      "$requestId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "otpSessions": {
+      ".indexOn": ["userId", "status", "expiresAt"],
+      "$sessionId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
     "qr_codes": {
       "$qrId": {
         ".read": "auth != null",

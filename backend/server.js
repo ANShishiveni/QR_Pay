@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const os = require('os');
 require('dotenv').config();
 
 // Initialize Firebase Admin SDK with error handling
@@ -9,18 +10,40 @@ try {
   const { initializeFirebase } = require('./config/firebase');
   initializeFirebase();
 } catch (error) {
-  console.error('❌ Failed to initialize Firebase:', error.message);
+  console.error('Failed to initialize Firebase:', error.message);
   console.error('Please check your .env file and Firebase configuration');
   process.exit(1);
 }
 
-const authRoutes = require('./routes/auth');
+const { router: authRoutes } = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const paymentRoutes = require('./routes/payments');
 const qrRoutes = require('./routes/qr');
+const otpRoutes = require('./routes/otp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Detect host IP with env override
+function getHostIP() {
+  if (process.env.HOST_IP) return process.env.HOST_IP;
+  const interfaces = os.networkInterfaces();
+  const priority = ['Wi-Fi', 'Ethernet', 'en0', 'eth0'];
+  for (const name of priority) {
+    const list = interfaces[name];
+    if (list) {
+      const found = list.find((iface) => iface.family === 'IPv4' && !iface.internal);
+      if (found) return found.address;
+    }
+  }
+  for (const name of Object.keys(interfaces)) {
+    const found = interfaces[name]?.find((iface) => iface.family === 'IPv4' && !iface.internal);
+    if (found) return found.address;
+  }
+  return 'localhost';
+}
+
+const HOST_IP = getHostIP();
 
 // Security middleware
 app.use(helmet());
@@ -32,19 +55,24 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS configuration
+// CORS configuration with dynamic IP
+const allowedOrigins = new Set([
+  'http://localhost:3000',
+  'http://localhost:19006',
+  'http://127.0.0.1:19006',
+  `http://${HOST_IP}:3000`,
+  `http://${HOST_IP}:19006`,
+]);
+
 app.use(cors({
-        origin: [
-    'http://localhost:3000',
-    'http://localhost:19006',
-    'http://127.0.0.1:19006',
-    'http://192.168.113.49:19006',
-    'exp://192.168.113.49:8081',
-    'http://10.139.208.10:19006',
-    'exp://10.139.208.10:8081',
-    'exp://192.168.1.100:19000',
-  ],
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow native app requests (no origin) and allowed dev origins
+    if (!origin || allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
 }));
 
 // Body parsing middleware
@@ -56,6 +84,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/qr', qrRoutes);
+app.use('/api/otp', otpRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -81,10 +110,10 @@ app.use('*', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-        console.log(`🌐 Network access: http://192.168.113.49:${PORT}/api/health`);
+  console.log(` Server running on port ${PORT}`);
+  console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(` Health check: http://localhost:${PORT}/api/health`);
+  console.log(` Network access: http://${HOST_IP}:${PORT}/api/health`);
 });
 
 module.exports = app;

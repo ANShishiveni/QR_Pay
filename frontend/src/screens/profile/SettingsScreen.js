@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,15 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
-  Image,
   TextInput,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { userAPI } from '../../config/api';
 import { colors } from '../../styles/theme';
+import mfaService from '../../services/mfaService';
+import toastService from '../../services/toastService';
 
 const SettingsScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -23,9 +24,18 @@ const SettingsScreen = ({ navigation }) => {
     newPassword: '',
     confirmPassword: '',
   });
+  
+  // Authentication settings state
+  const [authSettings, setAuthSettings] = useState({
+    smsEnabled: true,
+    primaryMethod: 'sms',
+  });
+  const [availableMethods, setAvailableMethods] = useState([]);
+  const [mfaStatus, setMfaStatus] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadUserProfile();
+    loadAuthSettings();
   }, []);
 
   const loadUserProfile = async () => {
@@ -34,125 +44,73 @@ const SettingsScreen = ({ navigation }) => {
       setUser(response.data.user);
     } catch (error) {
       console.error('Error loading profile:', error);
-      Alert.alert('Error', 'Failed to load profile');
+      toastService.error('Error', 'Failed to load profile');
+    }
+  };
+
+  const loadAuthSettings = async () => {
+    try {
+      setLoading(true);
+      
+      // Initialize MFA service
+      await mfaService.initialize();
+      
+      // Get MFA status
+      const status = await mfaService.getStatus();
+      setMfaStatus(status);
+      
+      if (status.success) {
+        setAuthSettings(status.preferences);
+        setAvailableMethods(status.availableMethods);
+      }
+    } catch (error) {
+      console.error('Error loading auth settings:', error);
+      toastService.error('Error', 'Failed to load authentication settings');
+    } finally {
+      setLoading(false);
     }
   };
 
   const requestImagePickerPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'We need access to your photo library to upload a profile picture.'
-      );
+      toastService.error('Permission Required', 'We need access to your photo library to upload a profile picture.');
       return false;
     }
     return true;
   };
 
-  const pickImage = async () => {
-    const hasPermission = await requestImagePickerPermissions();
-    if (!hasPermission) return;
+  // Authentication settings handlers
 
+  const handlePrimaryMethodChange = async (method) => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        base64: false,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        await uploadPhoto(result.assets[0]);
-      }
+      setLoading(true);
+      setAuthSettings(prev => ({ ...prev, primaryMethod: method }));
+      await mfaService.updatePreferences({ primaryMethod: method });
+      toastService.success('Success', `Primary authentication method changed to ${method}`);
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
-    }
-  };
-
-  const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'We need access to your camera to take a profile picture.'
-      );
-      return;
-    }
-
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        base64: false,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        await uploadPhoto(result.assets[0]);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo');
-    }
-  };
-
-  const uploadPhoto = async (imageAsset) => {
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('photo', {
-        uri: imageAsset.uri,
-        type: 'image/jpeg',
-        name: 'profile-photo.jpg',
-      });
-
-      const response = await userAPI.uploadPhoto(formData);
-      
-      // Update local user state
-      setUser(prev => ({
-        ...prev,
-        photoUrl: response.data.photoUrl
-      }));
-
-      Alert.alert('Success', 'Profile photo updated successfully!');
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-      Alert.alert('Error', 'Failed to upload photo');
+      console.error('Error changing primary method:', error);
+      toastService.error('Error', 'Failed to update primary authentication method');
     } finally {
       setLoading(false);
     }
-  };
-
-  const showPhotoOptions = () => {
-    Alert.alert(
-      'Select Photo',
-      'Choose how you want to add a profile photo',
-      [
-        { text: 'Camera', onPress: takePhoto },
-        { text: 'Photo Library', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
   };
 
   const handlePasswordChange = async () => {
     const { currentPassword, newPassword, confirmPassword } = passwordData;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all password fields');
+      toastService.error('Validation Error', 'Please fill in all password fields');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
+      toastService.error('Validation Error', 'New passwords do not match');
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters long');
+      toastService.error('Validation Error', 'New password must be at least 6 characters long');
       return;
     }
 
@@ -163,7 +121,7 @@ const SettingsScreen = ({ navigation }) => {
         newPassword,
       });
 
-      Alert.alert('Success', 'Password changed successfully!');
+      toastService.success('Success', 'Password changed successfully!');
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -172,7 +130,7 @@ const SettingsScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error changing password:', error);
       const errorMessage = error.response?.data?.error || 'Failed to change password';
-      Alert.alert('Error', errorMessage);
+      toastService.error('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -192,30 +150,6 @@ const SettingsScreen = ({ navigation }) => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Profile Photo Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile Photo</Text>
-          <View style={styles.photoSection}>
-            <View style={styles.photoContainer}>
-              {user?.photoUrl ? (
-                <Image source={{ uri: user.photoUrl }} style={styles.profilePhoto} />
-              ) : (
-                <View style={styles.placeholderPhoto}>
-                  <Ionicons name="person" size={40} color={colors.gray} />
-                </View>
-              )}
-            </View>
-            <TouchableOpacity
-              style={styles.changePhotoButton}
-              onPress={showPhotoOptions}
-              disabled={loading}
-            >
-              <Ionicons name="camera" size={20} color={colors.white} />
-              <Text style={styles.changePhotoText}>Change Photo</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Password Change Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Change Password</Text>
@@ -266,6 +200,7 @@ const SettingsScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -375,6 +310,54 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Authentication settings styles
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  settingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 14,
+    color: colors.gray,
+    lineHeight: 18,
+  },
+  methodSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.lightGray,
+    borderRadius: 8,
+    minWidth: 120,
+  },
+  methodText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    marginRight: 8,
   },
 });
 

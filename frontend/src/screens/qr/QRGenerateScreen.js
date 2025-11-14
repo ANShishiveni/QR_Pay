@@ -23,10 +23,11 @@ import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { qrAPI } from '../../config/api';
 import { colors, spacing } from '../../styles/theme';
+import toastService from '../../services/toastService';
 
 export default function QRGenerateScreen({ navigation }) {
   const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
+  const [reference, setReference] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [qrCodeData, setQrCodeData] = useState(null);
   const [paymentRequest, setPaymentRequest] = useState(null);
@@ -34,7 +35,12 @@ export default function QRGenerateScreen({ navigation }) {
 
   const handleGenerateQR = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      toastService.error('Validation Error', 'Please enter a valid amount');
+      return;
+    }
+
+    if (!reference.trim()) {
+      toastService.error('Validation Error', 'Please enter a reference for this transaction');
       return;
     }
 
@@ -43,25 +49,19 @@ export default function QRGenerateScreen({ navigation }) {
     try {
       const response = await qrAPI.generateQR({
         amount: parseFloat(amount),
-        description: description || 'QR Payment Request',
+        description: reference.trim(), // Use reference as description
+        reference: reference.trim(),
         expiresIn: 300, // 5 minutes
       });
 
       setQrCodeData(response.data.qrCode);
       setPaymentRequest(response.data.paymentRequest);
 
-      Alert.alert(
-        'QR Code Generated',
-        'Your payment request QR code has been generated successfully!',
-        [{ text: 'OK' }]
-      );
+      toastService.success('QR Code Generated', 'Your payment request QR code has been generated successfully!');
     } catch (error) {
       console.error('Generate QR error:', error);
       setQrCodeError(error.response?.data?.error || 'Failed to generate QR code');
-      Alert.alert(
-        'Error',
-        error.response?.data?.error || 'Failed to generate QR code'
-      );
+      toastService.error('Generation Failed', error.response?.data?.error || 'Failed to generate QR code');
     } finally {
       setIsGenerating(false);
     }
@@ -74,7 +74,7 @@ export default function QRGenerateScreen({ navigation }) {
       // Request media library permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'We need access to your media library to save and share the QR code image.');
+        toastService.error('Permission Required', 'We need access to your media library to save and share the QR code image.');
         return;
       }
 
@@ -94,7 +94,7 @@ export default function QRGenerateScreen({ navigation }) {
       // Share the image
       await Share.share({
         url: fileUri,
-        message: `Payment Request: N$ ${amount}\nDescription: ${description || 'QR Payment Request'}\n\nScan this QR code to pay.`,
+        message: `Payment Request: N$ ${amount}\nReference: ${reference}\n\nScan this QR code to pay.`,
         title: 'QR Payment Request',
       });
 
@@ -103,13 +103,13 @@ export default function QRGenerateScreen({ navigation }) {
 
     } catch (error) {
       console.error('Share error:', error);
-      Alert.alert('Share Error', 'Failed to share QR code. Please try again.');
+      toastService.error('Share Error', 'Failed to share QR code. Please try again.');
     }
   };
 
   const handleReset = () => {
     setAmount('');
-    setDescription('');
+    setReference('');
     setQrCodeData(null);
     setPaymentRequest(null);
     setQrCodeError(null);
@@ -132,7 +132,6 @@ export default function QRGenerateScreen({ navigation }) {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Ionicons name="qr-code" size={32} color={colors.white} />
           <Title style={styles.headerTitle}>Generate QR Code</Title>
           <Paragraph style={styles.headerSubtitle}>
             Create a payment request QR code
@@ -146,7 +145,7 @@ export default function QRGenerateScreen({ navigation }) {
             <Card.Content>
               <Title style={styles.cardTitle}>Payment Request Details</Title>
               <Paragraph style={styles.cardSubtitle}>
-                Enter the amount and description for your payment request
+                Enter the amount and reference for your payment request
               </Paragraph>
 
               <TextInput
@@ -166,14 +165,13 @@ export default function QRGenerateScreen({ navigation }) {
               />
 
               <TextInput
-                label="Description (Optional)"
-                value={description}
-                onChangeText={setDescription}
+                label="Reference *"
+                value={reference}
+                onChangeText={setReference}
                 mode="outlined"
-                placeholder="e.g., Lunch payment, Shared expenses"
+                placeholder="Enter your reference"
                 style={styles.input}
-                multiline
-                numberOfLines={3}
+                left={<Ionicons name="document-text" size={24} color={colors.primary} style={styles.iconButton} />}
                 theme={{
                   colors: {
                     primary: colors.primary,
@@ -237,12 +235,10 @@ export default function QRGenerateScreen({ navigation }) {
                     <Text style={styles.detailValue}>N$ {parseFloat(amount).toFixed(2)}</Text>
                   </View>
                   
-                  {description && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Description:</Text>
-                      <Text style={styles.detailValue}>{description}</Text>
-                    </View>
-                  )}
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Reference:</Text>
+                    <Text style={styles.detailValue}>{reference}</Text>
+                  </View>
                   
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Expires in:</Text>
@@ -268,7 +264,7 @@ export default function QRGenerateScreen({ navigation }) {
               >
                 <View style={styles.buttonContent}>
                   <Ionicons name="share" size={20} color={colors.white} style={styles.buttonIcon} />
-                  <Text style={styles.shareButtonText}>Share QR Code</Text>
+                  <Text style={styles.shareButtonText}>Share</Text>
                 </View>
               </Button>
 
@@ -284,7 +280,7 @@ export default function QRGenerateScreen({ navigation }) {
               >
                 <View style={styles.buttonContent}>
                   <Ionicons name="refresh" size={20} color={colors.white} style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Generate New</Text>
+                  <Text style={styles.buttonText}>Regenerate</Text>
                 </View>
               </Button>
             </View>
@@ -294,25 +290,25 @@ export default function QRGenerateScreen({ navigation }) {
               <Card.Content>
                 <Title style={styles.instructionsTitle}>How to use:</Title>
                 <View style={styles.instructionItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={20} color={colors.black} />
                   <Text style={styles.instructionText}>
                     Show this QR code to the person who needs to pay you
                   </Text>
                 </View>
                 <View style={styles.instructionItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={20} color={colors.black} />
                   <Text style={styles.instructionText}>
                     They can scan it with their phone camera or QR scanner
                   </Text>
                 </View>
                 <View style={styles.instructionItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={20} color={colors.black} />
                   <Text style={styles.instructionText}>
                     The payment will be processed automatically
                   </Text>
                 </View>
                 <View style={styles.instructionItem}>
-                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Ionicons name="checkmark-circle" size={20} color={colors.black} />
                   <Text style={styles.instructionText}>
                     You'll receive a notification when payment is complete
                   </Text>

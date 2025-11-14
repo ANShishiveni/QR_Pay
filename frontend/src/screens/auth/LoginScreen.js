@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { authAPI } from '../../config/api';
 import { theme, colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../context/AuthContext';
+import toastService from '../../services/toastService';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -49,9 +50,7 @@ export default function LoginScreen({ navigation }) {
       // Show success message
       console.log('🎉 Login successful! Navigating to home...');
       
-      if (Platform.OS === 'web') {
-        alert('Login Successful! Welcome back!');
-      }
+      toastService.success('Welcome Back!', 'Login successful');
     } catch (error) {
       console.error('❌ Login error:', error);
       console.error('❌ Login error details:', {
@@ -63,14 +62,7 @@ export default function LoginScreen({ navigation }) {
       const errorMessage = error.response?.data?.error || 'An error occurred during login';
       console.error('❌ Login failed:', errorMessage);
       
-      if (Platform.OS === 'web') {
-        alert(`Login Failed: ${errorMessage}`);
-      } else {
-        Alert.alert(
-          'Login Failed',
-          errorMessage
-        );
-      }
+      toastService.error('Login Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }

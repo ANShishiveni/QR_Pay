@@ -44,6 +44,21 @@ export const colors = {
   primary: '#2E7D32',
   primaryDark: '#1B5E20',
   primaryLight: '#4CAF50',
+  // New tertiary/brand colors
+  tertiary: '#FF4081',
+  tertiaryDark: '#C60055',
+  // Danger variations
+  danger: '#D32F2F',
+  dangerLight: '#FF6F60',
+  // Muted/neutral tones
+  muted: '#BDBDBD',
+  subtle: '#F7F7F7',
+  // Transparent helpers
+  transparentBlack: 'rgba(0,0,0,0.4)',
+  transparentWhite: 'rgba(255,255,255,0.6)',
+  // Gradient endpoints (convenience tokens)
+  gradientPrimaryStart: '#2E7D32',
+  gradientPrimaryEnd: '#1B5E20',
   secondary: '#FF6F00',
   secondaryDark: '#E65100',
   secondaryLight: '#FF9800',

@@ -2,7 +2,7 @@
 
 A clean, bulletproof React Native Expo app with no warnings.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
@@ -25,7 +25,7 @@ npm run clean
 - ✅ **Clean Dependencies** - All versions work together
 - ✅ **Web & Mobile** - Works on both platforms
 
-## 🎯 Testing
+## Testing
 
 **Android Device:**
 1. Open Expo Go app (version 2.33.21)
@@ -37,7 +37,7 @@ npm run clean
 2. Open `http://localhost:19006`
 3. App loads without warnings
 
-## 📦 Dependencies
+## Dependencies
 
 All dependencies are carefully selected for Expo SDK 53 compatibility:
 - `expo: ~53.0.0`
@@ -45,12 +45,12 @@ All dependencies are carefully selected for Expo SDK 53 compatibility:
 - `react-native: 0.76.3`
 - `react-native-paper: ^5.12.3`
 
-## 🔧 Configuration
+##  Configuration
 
 - **webpack.config.js** - Handles vector icons and polyfills
 - **app.json** - Clean Expo configuration
 - **package.json** - Bulletproof dependency versions
 
-## 🎉 Guarantee
+##  Guarantee
 
 This setup is **BULLETPROOF** and will work without any warnings or errors!

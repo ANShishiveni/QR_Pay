@@ -23,16 +23,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { userAPI } from '../../config/api';
 import { theme, colors, spacing } from '../../styles/theme';
 import { useAuth } from '../../context/AuthContext';
+import toastService from '../../services/toastService';
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
-  const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
     loadUserData();
-    loadStats();
   }, []);
 
   // Refresh profile data when screen comes into focus (e.g., returning from Settings)
@@ -47,8 +47,8 @@ export default function ProfileScreen({ navigation }) {
       if (user) {
         // Load fresh profile data from API to get photo URL
         const response = await userAPI.getProfile();
-        console.log('📸 Profile data loaded:', response.data.user);
-        console.log('📸 Photo URL:', response.data.user.photoUrl);
+        console.log('Profile data loaded:', response.data.user);
+        console.log('Photo URL:', response.data.user.photoUrl);
         setUserData(response.data.user);
       }
     } catch (error) {
@@ -57,58 +57,29 @@ export default function ProfileScreen({ navigation }) {
       if (user) {
         setUserData(user);
       }
-    }
-  };
-
-  const loadStats = async () => {
-    try {
-      const response = await userAPI.getStats();
-      setStats(response.data.stats);
-    } catch (error) {
-      console.error('Error loading stats:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: performLogout,
-        },
-      ]
-    );
+    setShowLogoutConfirm(true);
   };
 
-  const performLogout = async () => {
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false);
     try {
       await logout();
-      console.log('✅ Logout successful');
+      toastService.success('Logged Out', 'You have been successfully logged out');
+      console.log('Logout successful');
     } catch (error) {
       console.error('Logout error:', error);
+      toastService.error('Logout Failed', 'An error occurred during logout');
     }
   };
 
-  const formatAmount = (amount) => {
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount)) return 'N$ 0.00';
-    
-    // Format with commas for thousands separator
-    const formatted = numAmount.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    
-    return `N$ ${formatted}`;
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
   };
 
   if (isLoading) {
@@ -130,17 +101,17 @@ export default function ProfileScreen({ navigation }) {
         <View style={styles.headerContent}>
           {userData?.photoUrl ? (
             <>
-              {console.log('🖼️ Rendering photo with URL:', userData.photoUrl)}
+              {console.log('Rendering photo with URL:', userData.photoUrl)}
               <Image 
                 source={{ uri: userData.photoUrl }} 
                 style={styles.profilePhoto}
-                onError={(error) => console.log('❌ Image load error:', error)}
-                onLoad={() => console.log('✅ Image loaded successfully')}
+                onError={(error) => console.log('Image load error:', error)}
+                onLoad={() => console.log(' Image loaded successfully')}
               />
             </>
           ) : (
             <>
-              {console.log('👤 No photo URL, showing avatar with initials:', `${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`)}
+              {console.log(' No photo URL, showing avatar with initials:', `${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`)}
               <Avatar.Text
                 size={80}
                 label={`${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`}
@@ -159,65 +130,42 @@ export default function ProfileScreen({ navigation }) {
       </LinearGradient>
 
       <View style={styles.content}>
-        {/* Quick Stats */}
-        {stats && (
-          <Card style={styles.statsCard}>
-            <Card.Content>
-              <Title style={styles.cardTitle}>Account Overview</Title>
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{stats.totalTransactions}</Text>
-                  <Text style={styles.statLabel}>Transactions</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{formatAmount(stats.totalSent)}</Text>
-                  <Text style={styles.statLabel}>Total Sent</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{formatAmount(stats.totalReceived)}</Text>
-                  <Text style={styles.statLabel}>Total Received</Text>
-                </View>
-              </View>
-            </Card.Content>
-          </Card>
-        )}
-
         {/* Menu Options */}
         <Card style={styles.menuCard}>
           <Card.Content>
             <List.Item
+              title="My Profile"
+              description="Update your details and profile photo"
+              left={(props) => <Ionicons name="person" size={24} color={colors.black} />}
+              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+              onPress={() => navigation.navigate('MyProfile')}
+              style={styles.menuItem}
+            />
+            <Divider />
+            <List.Item
               title="My Cards"
               description="Manage your linked payment cards"
-              left={(props) => <Ionicons name="card" size={24} color={colors.primary} />}
+              left={(props) => <Ionicons name="card" size={24} color={colors.black} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('Cards')}
               style={styles.menuItem}
             />
             <Divider />
             <List.Item
-              title="Transaction History"
-              description="View all your payment history"
-              left={(props) => <Ionicons name="time" size={24} color={colors.primary} />}
-              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => navigation.navigate('Transactions')}
-              style={styles.menuItem}
-            />
-            <Divider />
-            <List.Item
               title="Settings"
-              description="Manage your profile photo and password"
-              left={(props) => <Ionicons name="settings" size={24} color={colors.primary} />}
+              description="Change password and app preferences"
+              left={(props) => <Ionicons name="settings" size={24} color={colors.black} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
               onPress={() => navigation.navigate('Settings')}
               style={styles.menuItem}
             />
-            <Divider />
+            
             <List.Item
-              title="Help & Support"
-              description="Get help and contact support"
-              left={(props) => <Ionicons name="help-circle" size={24} color={colors.primary} />}
+              title="Logout"
+              description="Sign out of your account"
+              left={(props) => <Ionicons name="log-out" size={24} color={colors.error} />}
               right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => Alert.alert('Help & Support', 'For support, please contact us at support@qrmoneytransfer.com')}
+              onPress={handleLogout}
               style={styles.menuItem}
             />
           </Card.Content>
@@ -229,7 +177,7 @@ export default function ProfileScreen({ navigation }) {
             <Title style={styles.cardTitle}>About This App</Title>
             <Paragraph style={styles.infoText}>
               QR Money Transfer is a prototype application designed to demonstrate 
-              cross-bank money transfers in Namibia using QR codes and Visa card integration.
+              cross-bank money transfers in Namibia using QR codes.
             </Paragraph>
             <Paragraph style={styles.infoText}>
               This application uses sandbox APIs for demonstration purposes and is not 
@@ -237,30 +185,40 @@ export default function ProfileScreen({ navigation }) {
             </Paragraph>
             <View style={styles.versionInfo}>
               <Text style={styles.versionText}>Version 1.0.0</Text>
-              <Text style={styles.versionText}>© 2024 QR Money Transfer</Text>
+              <Text style={styles.versionText}>© 2025 QR Money Transfer</Text>
             </View>
           </Card.Content>
         </Card>
-
-        {/* Logout Button */}
-        <Button
-          mode="outlined"
-          onPress={handleLogout}
-          style={styles.logoutButton}
-          textColor={colors.error}
-          buttonColor={colors.white}
-          theme={{
-            colors: {
-              primary: colors.error,
-            },
-          }}
-        >
-          <View style={styles.buttonContent}>
-            <Ionicons name="log-out" size={20} color={colors.error} style={styles.buttonIcon} />
-            <Text style={[styles.buttonText, { color: colors.error }]}>Logout</Text>
-          </View>
-        </Button>
       </View>
+
+      {/* Custom Logout Confirmation Dialog */}
+      {showLogoutConfirm && (
+        <View style={styles.overlay}>
+          <View style={styles.confirmationDialog}>
+            <Text style={styles.dialogTitle}>Logout</Text>
+            <Text style={styles.dialogMessage}>Are you sure you want to logout?</Text>
+            <View style={styles.dialogButtons}>
+              <Button
+                mode="outlined"
+                onPress={cancelLogout}
+                style={styles.cancelButton}
+                textColor={colors.textSecondary}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={confirmLogout}
+                style={styles.logoutButton}
+                buttonColor={colors.error}
+                textColor={colors.white}
+              >
+                Logout
+              </Button>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -320,42 +278,11 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
   },
-  statsCard: {
-    elevation: 4,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
     marginBottom: spacing.md,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: spacing.sm,
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-    minWidth: 0, // Allow flex shrinking
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
-    textAlign: 'center',
-    flexWrap: 'wrap',
-    maxWidth: '100%',
-  },
-  statLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    flexWrap: 'wrap',
-    maxWidth: '100%',
   },
   menuCard: {
     elevation: 4,
@@ -385,20 +312,54 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.xs,
   },
-  logoutButton: {
-    marginTop: spacing.lg,
-    borderColor: colors.error,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // Custom Dialog Styles
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
-  buttonIcon: {
-    marginRight: 8,
+  confirmationDialog: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: spacing.lg,
+    margin: spacing.lg,
+    minWidth: 280,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  buttonText: {
+  dialogTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  dialogMessage: {
     fontSize: 16,
-    fontWeight: '500',
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  dialogButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  cancelButton: {
+    flex: 1,
+    borderColor: colors.border,
+  },
+  logoutButton: {
+    flex: 1,
   },
 });

@@ -18,6 +18,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { qrAPI } from '../../config/api';
 import { colors, spacing } from '../../styles/theme';
+import toastService from '../../services/toastService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -39,7 +40,7 @@ export default function QRScanScreen({ navigation }) {
       const qrData = JSON.parse(data);
       
       if (qrData.type !== 'payment_request') {
-        Alert.alert('Invalid QR Code', 'This is not a valid payment request QR code.');
+        toastService.error('Invalid QR Code', 'This is not a valid payment request QR code.');
         setIsProcessing(false);
         return;
       }
@@ -59,10 +60,7 @@ export default function QRScanScreen({ navigation }) {
 
     } catch (error) {
       console.error('QR scan error:', error);
-      Alert.alert(
-        'Scan Error',
-        error.response?.data?.error || 'Failed to process QR code. Please try again.'
-      );
+      toastService.error('Scan Error', error.response?.data?.error || 'Failed to process QR code. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -127,7 +125,6 @@ export default function QRScanScreen({ navigation }) {
           </Button>
         </View>
         <View style={styles.headerContent}>
-          <Ionicons name="scan" size={32} color={colors.white} />
           <Title style={styles.headerTitle}>Scan QR Code</Title>
           <Paragraph style={styles.headerSubtitle}>
             Point your camera at a payment request QR code
@@ -170,19 +167,19 @@ export default function QRScanScreen({ navigation }) {
         <Card.Content>
           <Title style={styles.instructionsTitle}>How to scan:</Title>
           <View style={styles.instructionItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={20} color={colors.black} />
             <Text style={styles.instructionText}>
               Position the QR code within the frame above
             </Text>
           </View>
           <View style={styles.instructionItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={20} color={colors.black} />
             <Text style={styles.instructionText}>
               Make sure the QR code is clearly visible
             </Text>
           </View>
           <View style={styles.instructionItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={20} color={colors.black} />
             <Text style={styles.instructionText}>
               The app will automatically detect and process the code
             </Text>
