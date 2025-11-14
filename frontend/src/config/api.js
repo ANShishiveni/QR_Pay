@@ -5,8 +5,14 @@ import AsyncStorage from '../utils/asyncStorage';
 // Base API configuration (env-driven with sensible fallback)
 const API_HOST = process.env.EXPO_PUBLIC_API_URL
   || Constants?.expoConfig?.extra?.apiUrl
+  || Constants?.manifest?.extra?.apiUrl
   || 'http://localhost:3000';
 const API_BASE_URL = `${API_HOST}/api`;
+
+// Log resolved API host (non-sensitive)
+if (typeof console !== 'undefined') {
+  console.log('🔗 API base URL:', API_BASE_URL);
+}
 
 // Create axios instance with default config
 const apiClient = axios.create({

@@ -5,6 +5,9 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "extra": {
+      "apiUrl": "http://192.168.178.41:3000"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
