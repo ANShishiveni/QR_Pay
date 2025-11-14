@@ -5,9 +5,9 @@ try {
     throw new Error('STRIPE_SECRET_KEY not found in environment variables');
   }
   stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-  console.log('💳 Stripe initialized successfully');
+  console.log(' Stripe initialized successfully');
 } catch (error) {
-  console.error('❌ Stripe initialization failed:', error.message);
+  console.error(' Stripe initialization failed:', error.message);
   throw error;
 }
 
