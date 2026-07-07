@@ -1,6 +1,8 @@
 # QR Money Transfer Application
 
-A QR code mobile money transfer application prototype designed for Namibia, enabling cross-bank transfers using Visa cards and QR codes.
+This repository contains a full-stack mobile payment prototype designed to enable seamless money transfers between users across different banking institutions. Built to bridge financial gaps, the application modernizes transactions through a simple request-and-scan workflow.
+
+​A recipient initiates a transaction by inputting a requested amount to generate a dynamic, single-use QR code. The sender then scans the QR code with their device and securely authorizes the transfer using a linked Visa card and Multi-Factor Authentication (OTP).
 
 ## Features
 
