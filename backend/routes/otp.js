@@ -9,6 +9,11 @@ const {
 
 const router = express.Router();
 
+const jwtSecret = jwtSecret;
+if (!jwtSecret) {
+  throw new Error('JWT_SECRET must be set in the environment');
+}
+
 // Middleware to verify JWT token
 const verifyToken = async (req, res, next) => {
   try {
@@ -18,7 +23,7 @@ const verifyToken = async (req, res, next) => {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, jwtSecret);
     req.user = decoded;
     next();
   } catch (error) {

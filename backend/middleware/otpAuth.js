@@ -84,7 +84,10 @@ const checkOTPRateLimit = async (req, res, next) => {
 
   } catch (error) {
     console.error('Rate limit check failed:', error);
-    next(); // Allow on error to avoid blocking users
+    return res.status(503).json({
+      success: false,
+      error: 'OTP rate-limit service unavailable'
+    });
   }
 };
 
