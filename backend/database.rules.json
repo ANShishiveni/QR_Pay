@@ -26,15 +26,15 @@
     "paymentRequests": {
       ".indexOn": ["senderId", "status", "expiresAt"],
       "$requestId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+        ".read": "auth != null && (data.child('senderId').val() == auth.uid || data.child('receiverId').val() == auth.uid)",
+        ".write": "auth != null && ((!data.exists() && newData.child('senderId').val() == auth.uid) || data.child('senderId').val() == auth.uid)"
       }
     },
     "otpSessions": {
       ".indexOn": ["userId", "status", "expiresAt"],
       "$sessionId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+        ".read": "auth != null && data.child('userId').val() == auth.uid",
+        ".write": "auth != null && ((!data.exists() && newData.child('userId').val() == auth.uid) || data.child('userId').val() == auth.uid)"
       }
     },
     "qr_codes": {
