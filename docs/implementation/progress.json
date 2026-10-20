@@ -1,0 +1,309 @@
+{
+  "version": 1,
+  "blueprint": "BLUEPRINT.md",
+  "branch": "feat/nampay-2",
+  "baselineCommit": "998d2ec571289edbf777a52d9edea50652cf257b",
+  "updatedAt": "2026-10-20T06:48:41.201Z",
+  "phases": [
+    {
+      "phase": 0,
+      "title": "Baseline and isolated development",
+      "status": "Gate recorded; emulator and device evidence pending",
+      "tasks": [
+        {
+          "id": "P0-01",
+          "status": "Done",
+          "evidence": [
+            "BASELINE_AUDIT.md; baseline 998d2ec5; remote main verified; API open-PR listing blocked 403 recorded"
+          ],
+          "commit": null,
+          "nextAction": "Keep compatibility findings linked to regression tests"
+        },
+        {
+          "id": "P0-02",
+          "status": "In progress",
+          "evidence": [
+            "All three frozen installs passed; isolated in-memory repository ready; Firebase CLI installed externally"
+          ],
+          "commit": null,
+          "nextAction": "Start and validate real demo Firebase emulators"
+        },
+        {
+          "id": "P0-03",
+          "status": "Needs verification",
+          "evidence": [
+            "foundation.test.js: 3 passed; imports bind no listener; atomic conditional race and rollback pass"
+          ],
+          "commit": null,
+          "nextAction": "Replace stale auth/payment suites during P1"
+        },
+        {
+          "id": "P0-04",
+          "status": "In progress",
+          "evidence": [
+            "CONTRACT.md; TEST_MATRIX.md; Node/npm/Expo matrix recorded"
+          ],
+          "commit": null,
+          "nextAction": "Save baseline screenshots after restarting dev server"
+        }
+      ]
+    },
+    {
+      "phase": 1,
+      "title": "Security and core integrity",
+      "status": "In progress",
+      "tasks": [
+        {
+          "id": "P1-01",
+          "status": "In progress",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Implement and verify security regression tests"
+        },
+        {
+          "id": "P1-02",
+          "status": "In progress",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Implement and verify security regression tests"
+        },
+        {
+          "id": "P1-03",
+          "status": "In progress",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Implement and verify security regression tests"
+        },
+        {
+          "id": "P1-04",
+          "status": "In progress",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Implement and verify security regression tests"
+        },
+        {
+          "id": "P1-05",
+          "status": "In progress",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Implement and verify security regression tests"
+        },
+        {
+          "id": "P1-06",
+          "status": "In progress",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Implement and verify security regression tests"
+        },
+        {
+          "id": "P1-07",
+          "status": "In progress",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Implement and verify security regression tests"
+        },
+        {
+          "id": "P1-08",
+          "status": "In progress",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Implement and verify security regression tests"
+        }
+      ]
+    },
+    {
+      "phase": 2,
+      "title": "Design system and application shell",
+      "status": "Not started",
+      "tasks": [
+        {
+          "id": "P2-01",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P2-02",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P2-03",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P2-04",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        }
+      ]
+    },
+    {
+      "phase": 3,
+      "title": "QR and payment journeys",
+      "status": "Not started",
+      "tasks": [
+        {
+          "id": "P3-01",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P3-02",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P3-03",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P3-04",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P3-05",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        }
+      ]
+    },
+    {
+      "phase": 4,
+      "title": "Dashboard, cards, activity and receipts",
+      "status": "Not started",
+      "tasks": [
+        {
+          "id": "P4-01",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P4-02",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P4-03",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P4-04",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        }
+      ]
+    },
+    {
+      "phase": 5,
+      "title": "Reliability, accessibility and notifications",
+      "status": "Not started",
+      "tasks": [
+        {
+          "id": "P5-01",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P5-02",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P5-03",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P5-04",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        }
+      ]
+    },
+    {
+      "phase": 6,
+      "title": "QA, CI and release documentation",
+      "status": "Not started",
+      "tasks": [
+        {
+          "id": "P6-01",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P6-02",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P6-03",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P6-04",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        },
+        {
+          "id": "P6-05",
+          "status": "Not started",
+          "evidence": [],
+          "commit": null,
+          "nextAction": "Await previous phase gate"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Physical Android/iOS device validation has not run.",
+    "GitHub open PR query returned HTTP 403; HTTPS Git read access works.",
+    "No real provider credentials or production data will be used."
+  ]
+}
