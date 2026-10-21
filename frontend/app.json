@@ -4,10 +4,7 @@
     "slug": "nampay",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "extra": {
-      "apiUrl": "http://192.168.178.41:3000"
-    },
+    "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -18,9 +15,12 @@
     "android": {
       "package": "com.nampay.app",
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -30,15 +30,11 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow NamPay to access your camera to scan QR codes."
+          "cameraPermission": "Allow NamPay to access your camera to scan QR codes.",
+          "recordAudioAndroid": false
         }
       ],
-      [
-        "expo-barcode-scanner",
-        {
-          "cameraPermission": "Allow NamPay to access your camera to scan QR codes."
-        }
-      ]
+      "expo-secure-store"
     ]
   }
 }

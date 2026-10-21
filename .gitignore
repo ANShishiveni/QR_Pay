@@ -12,3 +12,13 @@ dist/
 .vscode/
 .idea/
 .DS_Store
+.cache/
+.firebase/
+.local/
+firebase-debug.log
+database-debug.log
+ui-debug.log
+*-debug.log
+coverage/
+test-results/
+playwright-report/

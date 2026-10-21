@@ -3,12 +3,12 @@
   "blueprint": "BLUEPRINT.md",
   "branch": "feat/nampay-2",
   "baselineCommit": "998d2ec571289edbf777a52d9edea50652cf257b",
-  "updatedAt": "2026-10-20T06:48:41.201Z",
+  "updatedAt": "2026-10-21T05:58:53.769Z",
   "phases": [
     {
       "phase": 0,
       "title": "Baseline and isolated development",
-      "status": "Gate recorded; emulator and device evidence pending",
+      "status": "Baseline gate passed; RTDB emulator blocked",
       "tasks": [
         {
           "id": "P0-01",
@@ -16,133 +16,159 @@
           "evidence": [
             "BASELINE_AUDIT.md; baseline 998d2ec5; remote main verified; API open-PR listing blocked 403 recorded"
           ],
-          "commit": null,
-          "nextAction": "Keep compatibility findings linked to regression tests"
+          "commit": "4f8fcc9e",
+          "nextAction": "None"
         },
         {
           "id": "P0-02",
-          "status": "In progress",
+          "status": "Blocked",
           "evidence": [
-            "All three frozen installs passed; isolated in-memory repository ready; Firebase CLI installed externally"
+            "Pinned Firebase CLI installed; real Auth emulator registration/login/rejections passed",
+            "RTDB download403 at storage.googleapis.com; network draft saved"
           ],
-          "commit": null,
-          "nextAction": "Start and validate real demo Firebase emulators"
+          "commit": "4f8fcc9e",
+          "nextAction": "Apply saved domain and run full emulator suite"
         },
         {
           "id": "P0-03",
-          "status": "Needs verification",
+          "status": "Done",
           "evidence": [
-            "foundation.test.js: 3 passed; imports bind no listener; atomic conditional race and rollback pass"
+            "Replaced stale suites; backend87 tests passed; app imports bind no listener"
           ],
-          "commit": null,
-          "nextAction": "Replace stale auth/payment suites during P1"
+          "commit": "4f8fcc9e",
+          "nextAction": "None"
         },
         {
           "id": "P0-04",
-          "status": "In progress",
+          "status": "Done",
           "evidence": [
-            "CONTRACT.md; TEST_MATRIX.md; Node/npm/Expo matrix recorded"
+            "CONTRACT.md; TEST_MATRIX.md; Node/npm/Expo matrix recorded",
+            "Baseline login/registration screenshots committed"
           ],
-          "commit": null,
-          "nextAction": "Save baseline screenshots after restarting dev server"
+          "commit": "4f8fcc9e",
+          "nextAction": "None"
         }
       ]
     },
     {
       "phase": 1,
       "title": "Security and core integrity",
-      "status": "In progress",
+      "status": "Local security gate passed; emulator/native verification pending",
       "tasks": [
         {
           "id": "P1-01",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "Backend87/87; frontend46/46; TypeScript pass",
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify security regression tests"
+          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
         },
         {
           "id": "P1-02",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "Backend87/87; frontend46/46; TypeScript pass",
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify security regression tests"
+          "nextAction": "Retain regression coverage"
         },
         {
           "id": "P1-03",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "Backend87/87; frontend46/46; TypeScript pass",
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify security regression tests"
+          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
         },
         {
           "id": "P1-04",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "Backend87/87; frontend46/46; TypeScript pass",
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify security regression tests"
+          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
         },
         {
           "id": "P1-05",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "Backend87/87; frontend46/46; TypeScript pass",
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify security regression tests"
+          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
         },
         {
           "id": "P1-06",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "Backend87/87; frontend46/46; TypeScript pass",
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify security regression tests"
+          "nextAction": "Retain regression coverage"
         },
         {
           "id": "P1-07",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "Backend87/87; frontend46/46; TypeScript pass",
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify security regression tests"
+          "nextAction": "Retain regression coverage"
         },
         {
           "id": "P1-08",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "Backend87/87; frontend46/46; TypeScript pass",
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify security regression tests"
+          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
         }
       ]
     },
     {
       "phase": 2,
       "title": "Design system and application shell",
-      "status": "Not started",
+      "status": "In progress",
       "tasks": [
         {
           "id": "P2-01",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement shared UI and verify components/screens"
         },
         {
           "id": "P2-02",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement shared UI and verify components/screens"
         },
         {
           "id": "P2-03",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement shared UI and verify components/screens"
         },
         {
           "id": "P2-04",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement shared UI and verify components/screens"
         }
       ]
     },
@@ -304,6 +330,7 @@
   "limitations": [
     "Physical Android/iOS device validation has not run.",
     "GitHub open PR query returned HTTP 403; HTTPS Git read access works.",
-    "No real provider credentials or production data will be used."
+    "No real provider credentials or production data will be used.",
+    "RTDB emulator artifact access blocked403; storage.googleapis.com requirement saved to cloud configuration draft but not applied."
   ]
 }

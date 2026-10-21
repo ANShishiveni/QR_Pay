@@ -4,44 +4,44 @@ Branch: `feat/nampay-2` · Baseline: `998d2ec571289edbf777a52d9edea50652cf257b`
 
 Machine-readable source: [progress.json](progress.json). Tasks become Done only after their evidence and acceptance criteria are verified.
 
-Updated: 2026-10-20T06:48:41.201Z
+Updated: 2026-10-21T05:58:53.769Z
 
 ## Phase 0 — Baseline and isolated development
 
-Status: **Gate recorded; emulator and device evidence pending**
+Status: **Baseline gate passed; RTDB emulator blocked**
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P0-01 | Done | BASELINE_AUDIT.md; baseline 998d2ec5; remote main verified; API open-PR listing blocked 403 recorded | Working tree | Keep compatibility findings linked to regression tests |
-| P0-02 | In progress | All three frozen installs passed; isolated in-memory repository ready; Firebase CLI installed externally | Working tree | Start and validate real demo Firebase emulators |
-| P0-03 | Needs verification | foundation.test.js: 3 passed; imports bind no listener; atomic conditional race and rollback pass | Working tree | Replace stale auth/payment suites during P1 |
-| P0-04 | In progress | CONTRACT.md; TEST_MATRIX.md; Node/npm/Expo matrix recorded | Working tree | Save baseline screenshots after restarting dev server |
+| P0-01 | Done | BASELINE_AUDIT.md; baseline 998d2ec5; remote main verified; API open-PR listing blocked 403 recorded | 4f8fcc9e | None |
+| P0-02 | Blocked | Pinned Firebase CLI installed; real Auth emulator registration/login/rejections passed; RTDB download403 at storage.googleapis.com; network draft saved | 4f8fcc9e | Apply saved domain and run full emulator suite |
+| P0-03 | Done | Replaced stale suites; backend87 tests passed; app imports bind no listener | 4f8fcc9e | None |
+| P0-04 | Done | CONTRACT.md; TEST_MATRIX.md; Node/npm/Expo matrix recorded; Baseline login/registration screenshots committed | 4f8fcc9e | None |
 
 ## Phase 1 — Security and core integrity
+
+Status: **Local security gate passed; emulator/native verification pending**
+
+| Task | Status | Evidence | Commit / PR | Next action |
+| --- | --- | --- | --- | --- |
+| P1-01 | Needs verification | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | Working tree | Complete real RTDB/native/browser validation with later phase gates |
+| P1-02 | Done | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | Working tree | Retain regression coverage |
+| P1-03 | Needs verification | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | Working tree | Complete real RTDB/native/browser validation with later phase gates |
+| P1-04 | Needs verification | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | Working tree | Complete real RTDB/native/browser validation with later phase gates |
+| P1-05 | Needs verification | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | Working tree | Complete real RTDB/native/browser validation with later phase gates |
+| P1-06 | Done | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | Working tree | Retain regression coverage |
+| P1-07 | Done | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | Working tree | Retain regression coverage |
+| P1-08 | Needs verification | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | Working tree | Complete real RTDB/native/browser validation with later phase gates |
+
+## Phase 2 — Design system and application shell
 
 Status: **In progress**
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P1-01 | In progress | Not verified | Working tree | Implement and verify security regression tests |
-| P1-02 | In progress | Not verified | Working tree | Implement and verify security regression tests |
-| P1-03 | In progress | Not verified | Working tree | Implement and verify security regression tests |
-| P1-04 | In progress | Not verified | Working tree | Implement and verify security regression tests |
-| P1-05 | In progress | Not verified | Working tree | Implement and verify security regression tests |
-| P1-06 | In progress | Not verified | Working tree | Implement and verify security regression tests |
-| P1-07 | In progress | Not verified | Working tree | Implement and verify security regression tests |
-| P1-08 | In progress | Not verified | Working tree | Implement and verify security regression tests |
-
-## Phase 2 — Design system and application shell
-
-Status: **Not started**
-
-| Task | Status | Evidence | Commit / PR | Next action |
-| --- | --- | --- | --- | --- |
-| P2-01 | Not started | Not verified | Working tree | Await previous phase gate |
-| P2-02 | Not started | Not verified | Working tree | Await previous phase gate |
-| P2-03 | Not started | Not verified | Working tree | Await previous phase gate |
-| P2-04 | Not started | Not verified | Working tree | Await previous phase gate |
+| P2-01 | In progress | Not verified | Working tree | Implement shared UI and verify components/screens |
+| P2-02 | In progress | Not verified | Working tree | Implement shared UI and verify components/screens |
+| P2-03 | In progress | Not verified | Working tree | Implement shared UI and verify components/screens |
+| P2-04 | In progress | Not verified | Working tree | Implement shared UI and verify components/screens |
 
 ## Phase 3 — QR and payment journeys
 
@@ -94,3 +94,4 @@ Status: **Not started**
 - Physical Android/iOS device validation has not run.
 - GitHub open PR query returned HTTP 403; HTTPS Git read access works.
 - No real provider credentials or production data will be used.
+- RTDB emulator artifact access blocked403; storage.googleapis.com requirement saved to cloud configuration draft but not applied.

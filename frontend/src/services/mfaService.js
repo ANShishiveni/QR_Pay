@@ -1,316 +1,65 @@
-import AsyncStorage from '../utils/asyncStorage';
+import preferences from '../utils/asyncStorage';
 import biometricService from './biometricService';
 import { otpAPI } from '../config/api';
 
+const defaults = () => ({ primaryMethod: 'otp', biometricEnabled: false });
 class MFAService {
-  constructor() {
-    this.preferences = {
-      primaryMethod: 'sms',
-      secondaryMethod: 'sms',
-      biometricEnabled: false,
-      smsEnabled: true,
-    };
-  }
-
-  /**
-   * Initialize MFA service
-   * @returns {Promise<Object>} - Initialization result
-   */
+  constructor() { this.preferences = defaults(); }
   async initialize() {
-    try {
-      // Load user preferences
-      await this.loadPreferences();
-      
-      // Check biometric availability
-      const biometricStatus = await biometricService.getStatus();
-      
-      return {
-        success: true,
-        preferences: this.preferences,
-        biometricAvailable: biometricStatus.canUse,
-      };
-    } catch (error) {
-      console.error('MFA initialization failed:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
+    await this.loadPreferences();
+    return { success: true, preferences: this.preferences, biometricAvailable: (await biometricService.getStatus()).canUse };
   }
-
-  /**
-   * Load user MFA preferences
-   * @returns {Promise<void>}
-   */
   async loadPreferences() {
+    this.preferences = defaults();
     try {
-      const stored = await AsyncStorage.getItem('mfaPreferences');
-      if (stored) {
-        this.preferences = { ...this.preferences, ...JSON.parse(stored) };
-      }
-    } catch (error) {
-      console.error('Failed to load MFA preferences:', error);
-    }
+      const saved = JSON.parse(await preferences.getItem('mfaPreferences') || '{}');
+      this.preferences.biometricEnabled = saved.biometricEnabled === true;
+      this.preferences.primaryMethod = saved.primaryMethod === 'biometric' ? 'biometric' : 'otp';
+    } catch { /* Invalid preferences revert to server verification. */ }
   }
-
-  /**
-   * Save user MFA preferences
-   * @returns {Promise<boolean>} - Success status
-   */
-  async savePreferences() {
-    try {
-      await AsyncStorage.setItem('mfaPreferences', JSON.stringify(this.preferences));
-      return true;
-    } catch (error) {
-      console.error('Failed to save MFA preferences:', error);
-      return false;
-    }
+  async updatePreferences(next) {
+    this.preferences = { primaryMethod: next.primaryMethod === 'biometric' ? 'biometric' : 'otp',
+      biometricEnabled: next.biometricEnabled ?? this.preferences.biometricEnabled };
+    await preferences.setItem('mfaPreferences', JSON.stringify(this.preferences));
+    return true;
   }
-
-  /**
-   * Update MFA preferences
-   * @param {Object} newPreferences - New preferences
-   * @returns {Promise<boolean>} - Success status
-   */
-  async updatePreferences(newPreferences) {
-    try {
-      this.preferences = { ...this.preferences, ...newPreferences };
-      return await this.savePreferences();
-    } catch (error) {
-      console.error('Failed to update MFA preferences:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get available authentication methods
-   * @returns {Promise<Array>} - Available methods
-   */
   async getAvailableMethods() {
-    const methods = [];
-    
-    // Check biometric availability
-    const biometricStatus = await biometricService.getStatus();
-    if (biometricStatus.canUse) {
-      methods.push({
-        id: 'biometric',
-        name: 'Biometric Authentication',
-        description: 'Use fingerprint or face recognition',
-        available: true,
-        enabled: this.preferences.biometricEnabled,
-      });
-    }
-
-    // SMS is always available
-    methods.push({
-      id: 'sms',
-      name: 'SMS OTP',
-      description: 'Receive OTP via SMS',
-      available: true,
-      enabled: this.preferences.smsEnabled,
-    });
-
-    return methods;
+    return [{ id: 'otp', name: 'Server verification', description: 'A request-bound code from the configured sandbox provider', enabled: true, available: true }];
   }
-
-  /**
-   * Authenticate using MFA
-   * @param {Object} options - Authentication options
-   * @returns {Promise<Object>} - Authentication result
-   */
-  async authenticate(options = {}) {
-    const { 
-      amount, 
-      recipient, 
-      purpose = 'payment_verification',
-      phoneNumber,
-      preferredMethod = null 
-    } = options;
-
+  async authenticate({ requestId, purpose = 'payment_verification', preferredMethod } = {}) {
+    if (!requestId) return { success: false, error: 'A current payment request is required.' };
+    if ((preferredMethod || this.preferences.primaryMethod) === 'biometric') {
+      const local = await biometricService.authenticate();
+      if (!local.success) return { ...local, fallbackAvailable: true };
+    }
+    return this.authenticateWithSMS(requestId, purpose);
+  }
+  async authenticateWithBiometric(requestId) {
+    return this.authenticate({ requestId, preferredMethod: 'biometric' });
+  }
+  async authenticateWithSMS(requestId, purpose = 'payment_verification') {
     try {
-      // Determine authentication method
-      const method = preferredMethod || this.preferences.primaryMethod;
-      
-      switch (method) {
-        case 'biometric':
-          return await this.authenticateWithBiometric(amount, recipient);
-        
-        case 'sms':
-          return await this.authenticateWithSMS(phoneNumber, purpose);
-        
-        default:
-          // Fallback to SMS
-          return await this.authenticateWithSMS(phoneNumber, purpose);
-      }
-    } catch (error) {
-      console.error('MFA authentication failed:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
+      const { data } = await otpAPI.sendOTP(requestId, purpose);
+      return { success: data.success === true, method: 'otp', sessionId: data.sessionId,
+        requiresVerification: true, expiresAt: data.expiresAt, provider: data.provider, maskedDestination: data.maskedDestination };
+    } catch (error) { return { success: false, error: error.message }; }
   }
-
-  /**
-   * Authenticate with biometric
-   * @param {string} amount - Payment amount
-   * @param {string} recipient - Payment recipient
-   * @returns {Promise<Object>} - Authentication result
-   */
-  async authenticateWithBiometric(amount, recipient) {
-    try {
-      const result = await biometricService.authenticateForPayment(amount, recipient);
-      
-      if (result.success) {
-        return {
-          success: true,
-          method: 'biometric',
-          sessionId: 'biometric_verified',
-        };
-      } else {
-        return {
-          success: false,
-          error: result.error,
-          fallbackAvailable: true,
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-        fallbackAvailable: true,
-      };
-    }
-  }
-
-  /**
-   * Authenticate with SMS OTP
-   * @param {string} phoneNumber - User's phone number
-   * @param {string} purpose - OTP purpose
-   * @returns {Promise<Object>} - Authentication result
-   */
-  async authenticateWithSMS(phoneNumber, purpose) {
-    try {
-      // Send OTP
-      const sendResult = await otpAPI.sendOTP(phoneNumber, purpose);
-      
-      if (sendResult.data.success) {
-        return {
-          success: true,
-          method: 'sms',
-          sessionId: sendResult.data.sessionId,
-          requiresVerification: true,
-          expiresAt: sendResult.data.expiresAt,
-        };
-      } else {
-        return {
-          success: false,
-          error: sendResult.data.error,
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Verify OTP
-   * @param {string} sessionId - OTP session ID
-   * @param {string} otp - OTP code
-   * @returns {Promise<Object>} - Verification result
-   */
   async verifyOTP(sessionId, otp) {
-    try {
-      const result = await otpAPI.verifyOTP(sessionId, otp);
-      
-      if (result.data.success) {
-        return {
-          success: true,
-          verified: true,
-        };
-      } else {
-        return {
-          success: false,
-          error: result.data.error,
-          attemptsLeft: result.data.attemptsLeft,
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
+    try { const { data } = await otpAPI.verifyOTP(sessionId, otp); return { success: data.success === true, verified: data.success === true }; }
+    catch (error) { return { success: false, error: error.message, attemptsLeft: error.response?.data?.attemptsLeft }; }
   }
-
-  /**
-   * Get MFA status
-   * @returns {Promise<Object>} - MFA status
-   */
   async getStatus() {
-    try {
-      const availableMethods = await this.getAvailableMethods();
-      const biometricStatus = await biometricService.getStatus();
-      
-      return {
-        success: true,
-        preferences: this.preferences,
-        availableMethods: availableMethods,
-        biometricAvailable: biometricStatus.canUse,
-        isConfigured: availableMethods.some(method => method.enabled),
-      };
-    } catch (error) {
-      console.error('Failed to get MFA status:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
+    await this.loadPreferences();
+    return { success: true, preferences: this.preferences, availableMethods: await this.getAvailableMethods(),
+      biometricAvailable: (await biometricService.getStatus()).canUse, isConfigured: true };
   }
-
-  /**
-   * Setup MFA for user
-   * @param {Object} setupOptions - Setup options
-   * @returns {Promise<Object>} - Setup result
-   */
-  async setupMFA(setupOptions = {}) {
-    try {
-      const { 
-        enableBiometric = false, 
-        enableSMS = true, 
-        primaryMethod = 'sms'
-      } = setupOptions;
-
-      // Update preferences
-      await this.updatePreferences({
-        biometricEnabled: enableBiometric,
-        smsEnabled: enableSMS,
-        primaryMethod: primaryMethod,
-      });
-
-      // Setup biometric if enabled
-      if (enableBiometric) {
-        const biometricSetup = await biometricService.setupBiometric();
-        if (!biometricSetup.success) {
-          console.warn('Biometric setup failed:', biometricSetup.error);
-        }
-      }
-
-      return {
-        success: true,
-        message: 'MFA setup completed successfully',
-      };
-    } catch (error) {
-      console.error('MFA setup failed:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
+  async setupMFA({ enableBiometric = false } = {}) {
+    if (enableBiometric) {
+      const result = await biometricService.setupBiometric();
+      if (!result.success) return result;
     }
+    await this.updatePreferences({ biometricEnabled: enableBiometric, primaryMethod: enableBiometric ? 'biometric' : 'otp' });
+    return { success: true, message: 'Device preference saved. Server verification is still required.' };
   }
 }
-
 export default new MFAService();

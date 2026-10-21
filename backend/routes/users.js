@@ -1,308 +1,164 @@
 const express = require('express');
-const multer = require('multer');
 const bcrypt = require('bcryptjs');
-const { getFirebaseServices } = require('../config/firebase');
-const jwt = require('jsonwebtoken');
+const { verifyToken } = require('../middleware/auth');
+const auth = require('../services/authService');
 
 const router = express.Router();
+const asyncRoute = handler => (req, res, next) => Promise.resolve(handler(req, res)).catch(next);
+router.use(verifyToken);
 
-// Configure multer for photo uploads
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'), false);
-    }
+function rejectOtherIdentity(req) {
+  if ((req.body?.uid && req.body.uid !== req.user.uid) || (req.query.uid && req.query.uid !== req.user.uid)) {
+    auth.fail(403, 'NOT_OWNER', 'You may only access your own account');
   }
-});
+}
 
-// Middleware to verify JWT token
-const verifyToken = async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
+router.get('/profile', asyncRoute(async (req, res) => {
+  rejectOtherIdentity(req);
+  res.json({ user: req.user, capabilities: { phoneChange: false, emailChange: false } });
+}));
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+router.put('/profile', asyncRoute(async (req, res) => {
+  rejectOtherIdentity(req);
+  const { repository, config } = req.app.locals;
+  const body = req.body || {};
+  if (Object.keys(body).some(key => !['firstName', 'lastName', 'email', 'phoneNumber', 'uid'].includes(key))) {
+    auth.fail(400, 'INVALID_INPUT', 'Only name fields can be edited here');
   }
-};
-
-// Get user profile
-router.get('/profile', verifyToken, async (req, res) => {
-  try {
-    const { realtimeDb } = getFirebaseServices();
-    const userSnapshot = await realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`).once('value');
-    const userData = userSnapshot.val();
-
-    if (!userData) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Remove sensitive data
-    const { hashedPassword, ...safeUserData } = userData;
-
-    res.json({
-      user: safeUserData
-    });
-
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ error: 'Failed to get profile', details: error.message });
+  if ((body.email !== undefined && auth.normalizeEmail(body.email) !== req.user.email) ||
+      (body.phoneNumber !== undefined && auth.validatePhone(body.phoneNumber) !== req.user.phoneNumber)) {
+    auth.fail(409, 'CONTACT_VERIFICATION_REQUIRED', 'Contact changes require a verified delivery provider, which is not enabled in this demo');
   }
-});
+  const changes = {};
+  if (body.firstName !== undefined) changes.firstName = auth.validateName(body.firstName, 'first name');
+  if (body.lastName !== undefined) changes.lastName = auth.validateName(body.lastName, 'last name');
+  if (!Object.keys(changes).length) auth.fail(400, 'INVALID_INPUT', 'Enter a name to update');
+  let user;
+  await repository.transaction(state => {
+    const current = auth.getUser(state, req.user.uid);
+    user = auth.canonicalUser(state, current, config);
+    Object.assign(user, changes, { updatedAt: new Date(auth.nowMs(config)).toISOString() });
+    return state;
+  });
+  res.json({ message: 'Profile updated', updates: changes, user: auth.publicUser(user) });
+}));
 
-// Update user profile
-router.put('/profile', verifyToken, async (req, res) => {
-  try {
-    const { firstName, lastName, phoneNumber } = req.body;
-    const { realtimeDb } = getFirebaseServices();
-    const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
-
-    const updates = {};
-    if (firstName) updates.firstName = firstName;
-    if (lastName) updates.lastName = lastName;
-    if (phoneNumber) updates.phoneNumber = phoneNumber;
-    updates.updatedAt = new Date().toISOString();
-
-    await userRef.update(updates);
-
-    res.json({
-      message: 'Profile updated successfully',
-      updates
-    });
-
-  } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(500).json({ error: 'Failed to update profile', details: error.message });
+router.put('/preferences', asyncRoute(async (req, res) => {
+  const body = req.body || {};
+  if (!Object.keys(body).length || Object.keys(body).some(key => !['theme', 'notifications', 'biometrics'].includes(key)) ||
+      (body.theme !== undefined && !['system', 'light', 'dark'].includes(body.theme)) ||
+      (body.notifications !== undefined && typeof body.notifications !== 'boolean') ||
+      (body.biometrics !== undefined && typeof body.biometrics !== 'boolean')) {
+    auth.fail(400, 'INVALID_PREFERENCES', 'Choose valid appearance and notification preferences');
   }
-});
+  const { repository, config } = req.app.locals;
+  let user;
+  await repository.transaction(state => {
+    user = auth.canonicalUser(state, auth.getUser(state, req.user.uid), config);
+    user.preferences = { theme: 'system', notifications: true, biometrics: false, ...user.preferences, ...body };
+    return state;
+  });
+  res.json({ preferences: user.preferences });
+}));
 
-// Get user's linked cards
-router.get('/cards', verifyToken, async (req, res) => {
-  try {
-    const { realtimeDb } = getFirebaseServices();
-    const userSnapshot = await realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`).once('value');
-    const userData = userSnapshot.val();
+router.post('/photo', asyncRoute(async (req, res) => {
+  const { photo } = req.body || {};
+  if (typeof photo !== 'string' || photo.length > 1400000) auth.fail(400, 'INVALID_PHOTO', 'Choose a PNG, JPEG, or WebP photo under 1 MB');
+  const match = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(photo);
+  if (!match) auth.fail(400, 'INVALID_PHOTO', 'Choose a PNG, JPEG, or WebP photo');
+  const bytes = Buffer.from(match[2], 'base64');
+  const valid = (match[1] === 'png' && bytes.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))) ||
+    (match[1] === 'jpeg' && bytes.subarray(0, 3).equals(Buffer.from('ffd8ff', 'hex'))) ||
+    (match[1] === 'webp' && bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP');
+  if (!valid || bytes.length > 1024 * 1024) auth.fail(400, 'INVALID_PHOTO', 'The photo format could not be verified');
+  const { repository, config } = req.app.locals;
+  await repository.transaction(state => {
+    const user = auth.canonicalUser(state, auth.getUser(state, req.user.uid), config);
+    user.photoUrl = photo;
+    user.updatedAt = new Date(auth.nowMs(config)).toISOString();
+    return state;
+  });
+  res.json({ message: 'Profile photo updated', photoUrl: photo });
+}));
 
-    if (!userData) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+router.put('/password', asyncRoute(async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  auth.validatePassword(newPassword);
+  if (typeof currentPassword !== 'string' || Buffer.byteLength(currentPassword) > 72) auth.fail(400, 'INVALID_INPUT', 'Enter your current password');
+  const { repository, config } = req.app.locals;
+  const before = auth.getUser((await repository.read()) || {}, req.user.uid);
+  if (!before || !(await bcrypt.compare(currentPassword, before.hashedPassword))) auth.fail(401, 'REAUTHENTICATION_FAILED', 'The current password is incorrect');
+  const hashedPassword = await bcrypt.hash(newPassword, 12);
+  await repository.transaction(state => {
+    const current = auth.getUser(state, req.user.uid);
+    if (current.hashedPassword !== before.hashedPassword) auth.fail(409, 'ACCOUNT_CHANGED', 'Your account changed. Please sign in again.');
+    const user = auth.canonicalUser(state, current, config);
+    user.hashedPassword = hashedPassword;
+    user.sessionVersion = (user.sessionVersion || 0) + 1;
+    user.updatedAt = new Date(auth.nowMs(config)).toISOString();
+    return state;
+  });
+  const { maxAge, ...options } = auth.sessionCookieOptions(config);
+  res.clearCookie('nampay_session', options);
+  res.json({ message: 'Password changed. Sign in again.', sessionsRevoked: true });
+}));
 
-    const cards = userData.cards || {};
+router.get('/cards', asyncRoute(async (req, res) => {
+  const { getUser, publicCard } = require('../services/paymentState');
+  const state = (await req.app.locals.repository.read()) || {};
+  const cards = Object.entries(getUser(state, req.user.uid)?.cards || {}).map(([id, card]) => publicCard ? publicCard({ ...card, id }) : {
+    id, brand: card.brand, last4: card.last4, bank: card.bank, isDefault: !!card.isDefault, createdAt: card.createdAt, simulated: true,
+  });
+  res.json({ cards });
+}));
 
-    // Return cards with masked numbers
-    const maskedCards = Object.keys(cards).map(cardId => ({
-      id: cardId,
-      last4: cards[cardId].last4,
-      brand: cards[cardId].brand,
-      bank: cards[cardId].bank,
-      isDefault: cards[cardId].isDefault || false,
-      createdAt: cards[cardId].createdAt
-    }));
+function activity(req, state) {
+  const { getUserTransactions } = require('../services/paymentState');
+  return getUserTransactions(state, req.user.uid);
+}
 
-    res.json({ cards: maskedCards });
+router.get('/transactions', asyncRoute(async (req, res) => {
+  rejectOtherIdentity(req);
+  const { filterTransactions } = require('../services/paymentState');
+  if (req.query.type && !['all', 'sent', 'received', 'send', 'receive'].includes(req.query.type)) auth.fail(400, 'INVALID_FILTER', 'Choose a valid activity filter');
+  const result = filterTransactions(activity(req, (await req.app.locals.repository.read()) || {}), req.query);
+  res.json({ ...result, total: result.pagination.total,
+    nextOffset: result.pagination.hasMore ? result.pagination.offset + result.pagination.limit : null });
+}));
 
-  } catch (error) {
-    console.error('Get cards error:', error);
-    res.status(500).json({ error: 'Failed to get cards', details: error.message });
-  }
-});
+router.get('/transactions/:id', asyncRoute(async (req, res) => {
+  const transaction = activity(req, (await req.app.locals.repository.read()) || {}).find(item => item.id === req.params.id || item.transactionId === req.params.id);
+  if (!transaction) auth.fail(404, 'TRANSACTION_NOT_FOUND', 'Transaction not found');
+  res.json({ transaction, receipt: { ...transaction, disclaimer: 'SIMULATED PAYMENT — No real funds transferred', simulated: true } });
+}));
 
-// Get user's transaction history
-router.get('/transactions', verifyToken, async (req, res) => {
-  try {
-    const { limit = 20, offset = 0 } = req.query;
-    
-    const { realtimeDb } = getFirebaseServices();
-    const transactionsRef = realtimeDb.ref('transactions')
-      .orderByChild('userId')
-      .equalTo(req.user.uid)
-      .limitToLast(parseInt(limit) + parseInt(offset));
+router.get('/stats', asyncRoute(async (req, res) => {
+  const items = activity(req, (await req.app.locals.repository.read()) || {});
+  const completed = items.filter(item => item.status === 'completed' || item.status === 'succeeded');
+  const sent = completed.filter(item => ['sent', 'send'].includes(item.role || item.type));
+  const received = completed.filter(item => ['received', 'receive'].includes(item.role || item.type));
+  const totalSentMinor = sent.reduce((sum, item) => sum + item.amountMinor, 0);
+  const totalReceivedMinor = received.reduce((sum, item) => sum + item.amountMinor, 0);
+  res.json({ stats: { totalTransactions: completed.length, totalSentMinor, totalReceivedMinor,
+    totalSent: totalSentMinor / 100, totalReceived: totalReceivedMinor / 100, simulated: true, currency: 'NAD',
+    lastTransaction: [...completed].sort((a, b) => Date.parse(b.completedAt || b.timestamp || b.createdAt) - Date.parse(a.completedAt || a.timestamp || a.createdAt))[0] || null } });
+}));
 
-    const snapshot = await transactionsRef.once('value');
-    const transactions = snapshot.val() || {};
-
-    // Convert to array and sort by timestamp
-    const transactionArray = Object.keys(transactions)
-      .map(id => ({ id, ...transactions[id] }))
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(parseInt(offset), parseInt(offset) + parseInt(limit));
-
-    res.json({ transactions: transactionArray });
-
-  } catch (error) {
-    console.error('Get transactions error:', error);
-    res.status(500).json({ error: 'Failed to get transactions', details: error.message });
-  }
-});
-
-// Get user statistics
-router.get('/stats', verifyToken, async (req, res) => {
-  try {
-    const { realtimeDb } = getFirebaseServices();
-    const transactionsRef = realtimeDb.ref('transactions')
-      .orderByChild('userId')
-      .equalTo(req.user.uid);
-
-    const snapshot = await transactionsRef.once('value');
-    const transactions = snapshot.val() || {};
-
-    const transactionArray = Object.values(transactions);
-    
-    const stats = {
-      totalTransactions: transactionArray.length,
-      totalSent: transactionArray
-        .filter(t => t.type === 'send')
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0),
-      totalReceived: transactionArray
-        .filter(t => t.type === 'receive')
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0),
-      lastTransaction: transactionArray.length > 0 
-        ? transactionArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0]
-        : null
-    };
-
-    res.json({ stats });
-
-  } catch (error) {
-    console.error('Get stats error:', error);
-    res.status(500).json({ error: 'Failed to get stats', details: error.message });
-  }
-});
-
-// Update user profile
-router.put('/profile', verifyToken, async (req, res) => {
-  try {
-    const { firstName, lastName, email, phoneNumber } = req.body;
-    
-    if (!firstName || !lastName) {
-      return res.status(400).json({ error: 'First name and last name are required' });
-    }
-
-    const { realtimeDb } = getFirebaseServices();
-    
-    // Update user profile
-    const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
-    const updates = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      updatedAt: new Date().toISOString()
-    };
-
-    // Only update phone number if provided
-    if (phoneNumber) {
-      updates.phoneNumber = phoneNumber.trim();
-    }
-
-    await userRef.update(updates);
-
-    // Get updated user data
-    const userSnapshot = await userRef.once('value');
-    const userData = userSnapshot.val();
-
-    res.json({
-      message: 'Profile updated successfully',
-      user: userData
-    });
-
-  } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(500).json({ error: 'Failed to update profile', details: error.message });
-  }
-});
-
-// Upload user photo
-router.post('/photo', verifyToken, async (req, res) => {
-  try {
-    const { photo } = req.body;
-    
-    if (!photo) {
-      return res.status(400).json({ error: 'No photo data provided' });
-    }
-
-    // Validate base64 data URL format
-    if (!photo.startsWith('data:image/')) {
-      return res.status(400).json({ error: 'Invalid photo format. Expected base64 data URL.' });
-    }
-
-    const { realtimeDb } = getFirebaseServices();
-    
-    // Update user profile with base64 photo data
-    const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
-    await userRef.update({
-      photoUrl: photo,
-      updatedAt: new Date().toISOString()
-    });
-
-    res.json({
-      message: 'Photo uploaded successfully',
-      photoUrl: photo
-    });
-
-  } catch (error) {
-    console.error('Photo upload error:', error);
-    res.status(500).json({ error: 'Failed to upload photo', details: error.message });
-  }
-});
-
-// Change user password
-router.put('/password', verifyToken, async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Current password and new password are required' });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
-    }
-
-    const { realtimeDb } = getFirebaseServices();
-    const userRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`);
-    const userSnapshot = await userRef.once('value');
-    const userData = userSnapshot.val();
-
-    if (!userData) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, userData.hashedPassword);
-    if (!isCurrentPasswordValid) {
-      return res.status(400).json({ error: 'Current password is incorrect' });
-    }
-
-    // Hash new password
-    const saltRounds = 10;
-    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
-
-    // Update password
-    await userRef.update({
-      hashedPassword: hashedNewPassword,
-      updatedAt: new Date().toISOString()
-    });
-
-    res.json({
-      message: 'Password changed successfully'
-    });
-
-  } catch (error) {
-    console.error('Password change error:', error);
-    res.status(500).json({ error: 'Failed to change password', details: error.message });
-  }
-});
+router.get('/notifications', asyncRoute(async (req, res) => {
+  const state = (await req.app.locals.repository.read()) || {};
+  const notifications = Object.entries(state.notifications?.[req.user.uid] || {}).map(([id, item]) => ({ ...item, id }));
+  notifications.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  res.json({ notifications: notifications.slice(0, 100) });
+}));
+router.put('/notifications/:id/read', asyncRoute(async (req, res) => {
+  const { repository, config } = req.app.locals;
+  await repository.transaction(state => {
+    const entry = state.notifications?.[req.user.uid]?.[req.params.id];
+    if (!entry) auth.fail(404, 'NOT_FOUND', 'Notification not found');
+    entry.readAt ||= new Date(auth.nowMs(config)).toISOString();
+    return state;
+  });
+  res.json({ message: 'Notification marked as read' });
+}));
 
 module.exports = router;

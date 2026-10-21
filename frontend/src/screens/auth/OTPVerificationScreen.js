@@ -12,184 +12,136 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { otpAPI } from '../../config/api';
+import { otpAPI, qrAPI } from '../../config/api';
+import * as Crypto from 'expo-crypto';
 import toastService from '../../services/toastService';
 
 const OTPVerificationScreen = ({ route, navigation }) => {
-  const { phoneNumber, purpose = 'payment_verification', paymentRequest, receiverCard } = route.params;
-  
+  const { purpose = 'payment_verification', paymentRequest, receiverCard } = route.params || {};
+  const requestId = paymentRequest?.id || route.params?.requestId;
+  const idempotencyKey = useRef(route.params?.idempotencyKey || null);
+  if (!idempotencyKey.current) idempotencyKey.current = Crypto.randomUUID();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+  const [expiresAt, setExpiresAt] = useState(null);
+  const [resendAt, setResendAt] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [canResend, setCanResend] = useState(false);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
-  
+  const [maskedDestination, setMaskedDestination] = useState('Server verification');
+  const [provider, setProvider] = useState(null);
+  const [uncertain, setUncertain] = useState(false);
   const inputRefs = useRef([]);
-  const timerRef = useRef(null);
+  const busy = useRef(false);
+  const verified = useRef(false);
+  const initialSent = useRef(false);
 
   useEffect(() => {
-    // Start countdown timer
-    startTimer();
-    
-    // Send initial OTP
-    sendOTP();
-    
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
+    if (!initialSent.current) { initialSent.current = true; sendOTP(); }
   }, []);
 
-  const startTimer = () => {
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          setCanResend(true);
-          clearInterval(timerRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+  useEffect(() => {
+    const tick = () => {
+      setTimeLeft(expiresAt ? Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000)) : 0);
+      setCanResend(Boolean(resendAt && Date.now() >= resendAt));
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt, resendAt]);
 
-  const sendOTP = async () => {
+  const sendOTP = async (resend = false) => {
+    if (busy.current || !requestId) return;
+    busy.current = true;
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const response = await otpAPI.sendOTP(phoneNumber, purpose);
-      
-      if (response.data.success) {
-        setSessionId(response.data.sessionId);
-        setTimeLeft(300);
-        setCanResend(false);
-        startTimer();
-        toastService.success('Success', 'OTP sent to your phone number');
-      } else {
-        toastService.error('Error', response.data.error || 'Failed to send OTP');
-      }
+      const { data } = await (resend ? otpAPI.resendOTP(requestId, purpose) : otpAPI.sendOTP(requestId, purpose));
+      if (!data.success || !data.sessionId) throw new Error('Verification could not be started.');
+      setSessionId(data.sessionId);
+      setExpiresAt(new Date(data.expiresAt).getTime());
+      setResendAt(new Date(data.resendAt).getTime());
+      setMaskedDestination(data.maskedDestination || 'Verified account destination');
+      setProvider(data.provider);
+      setOtp(['', '', '', '', '', '']);
+      verified.current = false;
+      setUncertain(false);
+      toastService.info('Verification ready', data.provider === 'mock' ? 'Use the code in your local demo inbox. No SMS was sent.' : 'Check your verified destination.');
     } catch (error) {
-      console.error('Send OTP error:', error);
-      toastService.error('Error', 'Failed to send OTP. Please try again.');
+      toastService.error('Verification unavailable', error.message);
     } finally {
+      busy.current = false;
       setIsLoading(false);
     }
   };
-
-  const resendOTP = async () => {
-    if (!canResend) return;
-    
-    try {
-      setIsLoading(true);
-      const response = await otpAPI.resendOTP(phoneNumber, purpose);
-      
-      if (response.data.success) {
-        setSessionId(response.data.sessionId);
-        setTimeLeft(300);
-        setCanResend(false);
-        startTimer();
-        setOtp(['', '', '', '', '', '']);
-        toastService.success('Success', 'OTP resent to your phone number');
-      } else {
-        toastService.error('Error', response.data.error || 'Failed to resend OTP');
-      }
-    } catch (error) {
-      console.error('Resend OTP error:', error);
-      toastService.error('Error', 'Failed to resend OTP. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  const resendOTP = () => { if (canResend && !uncertain) sendOTP(true); };
   const handleOtpChange = (value, index) => {
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    const digits = value.replace(/\D/g, '').slice(0, 6);
+    setOtp(previous => {
+      const next = [...previous];
+      if (!digits) next[index] = '';
+      else for (let offset = 0; offset < digits.length && index + offset < 6; offset++) next[index + offset] = digits[offset];
+      return next;
+    });
+    if (digits) inputRefs.current[Math.min(5, index + digits.length)]?.focus();
   };
-
   const handleKeyPress = (key, index) => {
-    if (key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
+    if (key === 'Backspace' && !otp[index] && index > 0) inputRefs.current[index - 1]?.focus();
   };
-
+  const completed = (transaction) => {
+    if (!transaction || transaction.status !== 'completed') throw new Error('The payment result is not yet confirmed.');
+    setUncertain(false);
+    toastService.success('Simulated payment completed', 'No real funds were transferred. View the record in Activity.');
+    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+  };
+  const reconcile = async () => {
+    const { data } = await qrAPI.getRequest(requestId);
+    if (data.paymentRequest?.status === 'completed' && data.transaction) {
+      completed(data.transaction);
+      return true;
+    }
+    if (['expired', 'cancelled', 'failed'].includes(data.paymentRequest?.status)) {
+      setUncertain(false);
+      throw new Error(`This request is ${data.paymentRequest.status}. No further payment can be submitted.`);
+    }
+    return false;
+  };
   const verifyOTP = async () => {
-    const otpString = otp.join('');
-    
-    if (otpString.length !== 6) {
-      toastService.error('Validation Error', 'Please enter the complete 6-digit OTP');
+    if (busy.current) return;
+    if (!requestId || !receiverCard?.id || !sessionId) {
+      toastService.error('Review required', 'Return to the payment request and select a test card.');
       return;
     }
-
-    if (!sessionId) {
-      toastService.error('Session Expired', 'Session expired. Please request a new OTP');
+    if (!verified.current && !/^\d{6}$/.test(otp.join(''))) {
+      toastService.error('Check code', 'Enter the complete six-digit verification code.');
       return;
     }
-
+    busy.current = true;
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const response = await otpAPI.verifyOTP(sessionId, otpString);
-      
-      if (response.data.success) {
-        // Process payment if this is a payment verification
-        if (purpose === 'payment_verification' && paymentRequest && receiverCard) {
-          await processPayment(sessionId);
-        } else {
-          toastService.success('Success', 'OTP verified successfully');
-          setTimeout(() => navigation.goBack(), 1000);
-        }
-      } else {
-        setAttemptsLeft(response.data.attemptsLeft || attemptsLeft - 1);
-        toastService.error('Verification Failed', response.data.error || 'Invalid OTP');
-        
-        if (attemptsLeft <= 1) {
-          toastService.error('Max Attempts Exceeded', 'Maximum attempts exceeded. Please request a new OTP');
-          setTimeout(() => navigation.goBack(), 2000);
-        }
+      if (uncertain && await reconcile()) return;
+      if (!verified.current) {
+        const { data } = await otpAPI.verifyOTP(sessionId, otp.join(''));
+        if (!data.success) throw new Error('Verification was not accepted.');
+        verified.current = true;
+      }
+      try {
+        const { data } = await qrAPI.confirmPayment({ requestId, cardId: receiverCard.id,
+          sessionId, idempotencyKey: idempotencyKey.current });
+        if (data.simulated !== true) throw new Error('Unexpected payment response. Check request status.');
+        completed(data.transaction);
+      } catch (error) {
+        if (!error.isNetworkError) throw error;
+        setUncertain(true);
+        try { if (await reconcile()) return; } catch { /* Keep unknown until a later authoritative response. */ }
+        toastService.info('Checking payment status', 'The connection was interrupted. Check status before starting another payment.');
       }
     } catch (error) {
-      console.error('Verify OTP error:', error);
-      toastService.error('Verification Failed', 'Failed to verify OTP. Please try again.');
+      if (typeof error.response?.data?.attemptsLeft === 'number') setAttemptsLeft(error.response.data.attemptsLeft);
+      toastService.error(uncertain ? 'Status unavailable' : 'Verification not completed', error.message);
     } finally {
+      busy.current = false;
       setIsLoading(false);
-    }
-  };
-
-  const processPayment = async (sessionId) => {
-    try {
-      const { qrAPI } = require('../../config/api');
-      
-      const response = await qrAPI.confirmPayment({
-        requestId: paymentRequest.id,
-        receiverCardId: receiverCard.id,
-        sessionId: sessionId,
-      });
-
-      const { transaction } = response.data;
-
-      toastService.success(
-        'Payment Successful!',
-        `You have successfully paid N$ ${transaction.amount.toFixed(2)} to ${transaction.senderName}.`
-      );
-      
-      setTimeout(() => {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'MainTabs' }],
-        });
-      }, 2000);
-    } catch (error) {
-      console.error('Payment error:', error);
-      toastService.error(
-        'Payment Failed',
-        error.response?.data?.error || 'An error occurred during payment processing. Please try again.'
-      );
     }
   };
 
@@ -225,10 +177,11 @@ const OTPVerificationScreen = ({ route, navigation }) => {
             <Ionicons name="shield-checkmark" size={80} color="#4CAF50" />
           </View>
 
-          <Text style={styles.title}>Enter Verification Code</Text>
+          <Text style={styles.title}>Verify simulated payment</Text>
+          {provider === 'mock' && <Text style={styles.subtitle}>Local demo inbox — no SMS is sent. No real funds are transferred.</Text>}
           <Text style={styles.subtitle}>
-            We've sent a 6-digit code to{'\n'}
-            <Text style={styles.phoneNumber}>{phoneNumber}</Text>
+            Verification destination:{'\n'}
+            <Text style={styles.phoneNumber}>{maskedDestination}</Text>
           </Text>
 
           {/* OTP Input */}
@@ -263,7 +216,7 @@ const OTPVerificationScreen = ({ route, navigation }) => {
           <TouchableOpacity
             style={[styles.resendButton, !canResend && styles.resendButtonDisabled]}
             onPress={resendOTP}
-            disabled={!canResend || isLoading}
+            disabled={!canResend || isLoading || uncertain}
           >
             <Text style={[styles.resendButtonText, !canResend && styles.resendButtonTextDisabled]}>
               Resend Code
@@ -284,12 +237,12 @@ const OTPVerificationScreen = ({ route, navigation }) => {
               (!isOtpComplete || isLoading) && styles.verifyButtonDisabled
             ]}
             onPress={verifyOTP}
-            disabled={!isOtpComplete || isLoading}
+            disabled={(!isOtpComplete && !uncertain) || isLoading || (timeLeft === 0 && !uncertain)}
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.verifyButtonText}>Verify OTP</Text>
+              <Text style={styles.verifyButtonText}>{uncertain ? 'Check payment status' : 'Verify code'}</Text>
             )}
           </TouchableOpacity>
         </View>

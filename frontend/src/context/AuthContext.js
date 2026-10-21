@@ -1,87 +1,142 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '../utils/asyncStorage';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { AppState, Platform } from 'react-native';
+import { authAPI } from '../config/api';
+import { sessionExpiry } from '../config/apiPolicy';
+import preferences, { clearSessionCache, setPreferenceUser } from '../utils/asyncStorage';
+import sessionStorage from '../services/storage/sessionStorage';
+import { onSessionExpired } from '../services/sessionEvents';
 
 const AuthContext = createContext();
-
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
+  const [expiresAt, setExpiresAt] = useState(null);
+  const operation = useRef(0);
 
-  useEffect(() => {
-    checkAuthStatus();
+  const lockSession = useCallback(() => {
+    operation.current += 1;
+    clearSessionCache();
+    setUser(null);
+    setExpiresAt(null);
+    setIsLoading(false);
   }, []);
 
-  const checkAuthStatus = async () => {
+  const acceptVerifiedSession = useCallback((data) => {
+    if (data?.valid !== true || typeof data.user?.uid !== 'string') {
+      throw new Error('Unable to validate your session. Please sign in again.');
+    }
+    const expiry = sessionExpiry(data.expiresAt);
+    setPreferenceUser(data.user.uid);
+    setUser(data.user);
+    setExpiresAt(expiry);
+    setAuthError(null);
+  }, []);
+
+  const checkAuthStatus = useCallback(async () => {
+    const current = ++operation.current;
+    setIsLoading(true);
+    setAuthError(null);
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const userData = await AsyncStorage.getItem('userData');
-      
-      console.log('🔍 AuthContext: Checking auth status:', { hasToken: !!token, hasUserData: !!userData });
-      
-      if (token && userData) {
-        setUser(JSON.parse(userData));
-        setIsAuthenticated(true);
-        console.log('✅ AuthContext: User is authenticated');
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-        console.log('❌ AuthContext: User is not authenticated');
+      // An interrupted web logout must not revive the still-present cookie.
+      if (await preferences.getItem('sessionLogoutPending') === 'true') {
+        try { await authAPI.logout(); } catch (error) {
+          if (error.response?.status !== 401) throw error;
+        }
+        await sessionStorage.clearToken();
+        await preferences.removeItem('sessionLogoutPending');
+        if (operation.current === current) lockSession();
+        return;
       }
+      if (Platform.OS !== 'web' && !(await sessionStorage.getToken())) {
+        if (operation.current === current) lockSession();
+        return;
+      }
+      const response = await authAPI.verifyToken();
+      if (operation.current === current) acceptVerifiedSession(response.data);
     } catch (error) {
-      console.error('AuthContext: Error checking auth status:', error);
-      setUser(null);
-      setIsAuthenticated(false);
+      if (operation.current === current) {
+        clearSessionCache();
+        setUser(null);
+        setExpiresAt(null);
+        if (error.response?.status !== 401) {
+          setAuthError('Your session could not be verified. Check your connection and try again.');
+        }
+      }
+    } finally {
+      if (operation.current === current) setIsLoading(false);
+    }
+  }, [acceptVerifiedSession, lockSession]);
+
+  const login = useCallback(async (token) => {
+    const current = ++operation.current;
+    setAuthError(null);
+    try {
+      await sessionStorage.setToken(token);
+      const response = await authAPI.verifyToken();
+      if (operation.current !== current) throw new Error('Sign-in was interrupted. Please try again.');
+      await preferences.removeItem('sessionLogoutPending');
+      acceptVerifiedSession(response.data);
+    } catch (error) {
+      lockSession();
+      try { await sessionStorage.clearToken(); } catch { /* Remain locked. */ }
+      throw error;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [acceptVerifiedSession, lockSession]);
 
-  const login = async (token, userData) => {
+  const logout = useCallback(async () => {
+    lockSession();
+    // This flag is non-sensitive; the browser's HttpOnly cookie is server-owned.
+    try { await preferences.setItem('sessionLogoutPending', 'true'); } catch { /* Still attempt server revocation. */ }
     try {
-      await AsyncStorage.setItem('authToken', token);
-      await AsyncStorage.setItem('userData', JSON.stringify(userData));
-      setUser(userData);
-      setIsAuthenticated(true);
-      console.log('✅ AuthContext: Login successful');
+      try { await authAPI.logout(); } catch (error) {
+        if (error.response?.status !== 401) throw error;
+      }
+      await sessionStorage.clearToken();
+      await preferences.removeItem('sessionLogoutPending');
+      setAuthError(null);
     } catch (error) {
-      console.error('AuthContext: Error during login:', error);
+      try { await sessionStorage.clearToken(); } catch { /* UI remains locked. */ }
+      setAuthError('Signed out on this screen. Reconnect to finish ending your server session.');
       throw error;
     }
-  };
+  }, [lockSession]);
 
-  const logout = async () => {
-    try {
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('userData');
-      setUser(null);
-      setIsAuthenticated(false);
-      console.log('✅ AuthContext: Logout successful');
-    } catch (error) {
-      console.error('AuthContext: Error during logout:', error);
-      throw error;
-    }
-  };
+  useEffect(() => {
+    const unsubscribe = onSessionExpired(() => {
+      lockSession();
+      setAuthError('Your session has ended. Please sign in again.');
+    });
+    checkAuthStatus();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') checkAuthStatus();
+    });
+    return () => { operation.current += 1; unsubscribe(); subscription.remove(); };
+  }, [checkAuthStatus, lockSession]);
 
-  const value = {
-    isAuthenticated,
-    isLoading,
-    user,
-    login,
-    logout,
-    checkAuthStatus,
-  };
+  useEffect(() => {
+    if (!expiresAt) return undefined;
+    const timeout = setTimeout(() => {
+      lockSession();
+      setAuthError('Your session has expired. Please sign in again.');
+      sessionStorage.clearToken().catch(() => {});
+    }, Math.max(0, Math.min(expiresAt - Date.now(), 2147483647)));
+    return () => clearTimeout(timeout);
+  }, [expiresAt, lockSession]);
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{
+      isAuthenticated: Boolean(user), isLoading, user, authError, expiresAt,
+      login, logout, checkAuthStatus,
+    }}>
       {children}
     </AuthContext.Provider>
   );

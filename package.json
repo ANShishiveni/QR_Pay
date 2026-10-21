@@ -1,14 +1,21 @@
 {
   "name": "qr-money-transfer",
   "version": "1.0.0",
-  "description": "QR Code Mobile Money Transfer Application for Namibia",
+  "description": "NamPay 2.0 — a simulated QR-payment prototype",
   "main": "index.js",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js",
-    "client": "cd frontend && npm start",
-    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "update-ip": "node update-ip.js"
+    "start": "npm --prefix backend start",
+    "dev": "npm --prefix backend run dev",
+    "client": "npm --prefix frontend start",
+    "dev:demo": "NODE_ENV=development DEMO_MODE=true DATABASE_MODE=memory OTP_PROVIDER=mock npm --prefix backend run dev",
+    "install-all": "npm ci && npm --prefix backend ci && npm --prefix frontend ci --legacy-peer-deps",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "npm --prefix backend test -- --runInBand",
+    "test:frontend": "npm --prefix frontend test -- --ci",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "emulators:install": "bash scripts/install-emulators.sh",
+    "emulators": "bash scripts/emulators.sh",
+    "test:emulators": "bash scripts/emulators.sh exec \"node scripts/emulator-smoke.cjs\""
   },
   "keywords": [
     "qr",
@@ -18,19 +25,9 @@
     "mobile",
     "payment"
   ],
-  "author": "Your Name",
+  "author": "",
   "license": "MIT",
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "firebase-admin": "^13.5.0",
-    "jsonwebtoken": "^9.0.2",
-    "stripe": "^14.5.0",
-    "uuid": "^9.0.1"
-  },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "playwright": "1.56.1"
   }
 }

@@ -58,8 +58,8 @@ export default function RegisterScreen({ navigation }) {
       return false;
     }
 
-    if (password.length < 6) {
-      toastService.error('Validation Error', 'Password must be at least 6 characters long');
+    if (password.length < 12) {
+      toastService.error('Validation Error', 'Password must be at least 12 characters long');
       return false;
     }
 
@@ -73,13 +73,13 @@ export default function RegisterScreen({ navigation }) {
     if (phoneNumber && phoneNumber.trim()) {
       // Remove all non-digit characters for validation
       const digitsOnly = phoneNumber.replace(/\D/g, '');
-      
+
       // Check if phone number has reasonable length (7-15 digits)
       if (digitsOnly.length < 7) {
         toastService.error('Validation Error', 'Phone number must be at least 7 digits');
         return false;
       }
-      
+
       if (digitsOnly.length > 15) {
         toastService.error('Validation Error', 'Phone number cannot exceed 15 digits');
         return false;
@@ -94,38 +94,32 @@ export default function RegisterScreen({ navigation }) {
 
     setIsLoading(true);
     try {
-      console.log('🎯 Starting registration with data:', { ...formData, password: '[HIDDEN]' });
-      
+
+
       const { confirmPassword, ...registrationData } = formData;
-      console.log('📤 Sending registration request to API...');
-      console.log('📋 Registration data:', registrationData);
-      
-      const response = await authAPI.register(registrationData);
-      console.log('✅ Registration response:', response.data);
-      
+
+
+
+      const response = await authAPI.register({ ...registrationData, email: registrationData.email.trim().toLowerCase() });
+
+
       const { token, user } = response.data;
 
       // Use AuthContext to handle login
       await login(token, user);
-      console.log('Auth data stored successfully');
+
 
       // Show success message
-      console.log('🎉 Registration successful! Navigating to home...');
-      
+
+
       toastService.success('Account Created!', 'Registration successful');
     } catch (error) {
-      console.error('❌ Registration error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        config: error.config,
-        stack: error.stack
-      });
-      
+
+
       // Show error message
       const errorMessage = error.response?.data?.error || error.message || 'An error occurred during registration';
-      console.error('❌ Registration failed:', errorMessage);
-      
+
+
       toastService.error('Registration Failed', errorMessage);
     } finally {
       setIsLoading(false);

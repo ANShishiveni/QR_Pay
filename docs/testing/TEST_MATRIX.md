@@ -27,6 +27,33 @@ not establish that registration, secure storage, QR validation, OTP or payment
 works. Updated harness and implementation results must be recorded below with
 their exact command and counts, without rewriting these historical outcomes.
 
+## Phase 1 frontend evidence
+
+The following checks passed on 20 October 2026 with mocked platform storage and
+HTTP boundaries:
+
+```sh
+cd frontend
+npx --no-install jest --runInBand --ci \
+  src/context/__tests__/AuthContext.test.js \
+  src/config/__tests__/apiPolicy.test.js \
+  src/services/storage/__tests__/storage.test.js
+```
+
+Result: **3 suites, 27 tests passed**. This covers native secure-adapter selection,
+web refusal to persist tokens in JavaScript storage, preference/account
+isolation, storage failures, HTTPS configuration, sanitized API errors,
+verify-before-auth, native missing-token startup, failed verification/retry,
+session invalidation, pending logout recovery and lifecycle listener cleanup.
+`git diff --check` passed after this batch. Android/iOS device storage and the
+real browser cookie round trip remain separate checks; these tests do not mark
+either of those capabilities verified.
+
+`npx --no-install jest --runInBand --ci src/config/__tests__/api.test.js`
+also passed: **1 suite, 3 tests**. An Axios test adapter verifies request-bound
+OTP payloads, no automatic retry after a payment timeout, and HTTP 401 session
+invalidation. No external network calls occur in these tests.
+
 ## Required security and correctness scenarios
 
 All scenarios below are P0. Initial status is **Not verified** because the original

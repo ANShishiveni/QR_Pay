@@ -38,30 +38,25 @@ export default function LoginScreen({ navigation }) {
 
     setIsLoading(true);
     try {
-      console.log('🎯 Starting login with email:', email);
-      const response = await authAPI.login({ email, password });
-      console.log('✅ Login response:', response.data);
+
+      const response = await authAPI.login({ email: email.trim().toLowerCase(), password });
+
       const { token, user } = response.data;
 
       // Use AuthContext to handle login
       await login(token, user);
-      console.log('🔐 Auth data stored successfully');
+
 
       // Show success message
-      console.log('🎉 Login successful! Navigating to home...');
-      
+
+
       toastService.success('Welcome Back!', 'Login successful');
     } catch (error) {
-      console.error('❌ Login error:', error);
-      console.error('❌ Login error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        stack: error.stack
-      });
+
+
       const errorMessage = error.response?.data?.error || 'An error occurred during login';
-      console.error('❌ Login failed:', errorMessage);
-      
+
+
       toastService.error('Login Failed', errorMessage);
     } finally {
       setIsLoading(false);

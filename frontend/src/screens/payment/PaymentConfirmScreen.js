@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -17,12 +17,15 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Crypto from 'expo-crypto';
 import { qrAPI } from '../../config/api';
 import toastService from '../../services/toastService';
 import { theme, colors, spacing, typography } from '../../styles/theme';
 
 export default function PaymentConfirmScreen({ route, navigation }) {
   const { paymentRequest, receiverCard } = route.params;
+  const idempotencyKey = useRef(null);
+  if (!idempotencyKey.current) idempotencyKey.current = Crypto.randomUUID();
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
@@ -34,7 +37,8 @@ export default function PaymentConfirmScreen({ route, navigation }) {
     setShowConfirmDialog(false);
     // Navigate directly to OTP verification
     navigation.navigate('OTPVerification', {
-      phoneNumber: '+264816294914', // Verified Twilio number
+      requestId: paymentRequest.id,
+      idempotencyKey: idempotencyKey.current,
       purpose: 'payment_verification',
       paymentRequest: paymentRequest,
       receiverCard: receiverCard,
@@ -43,39 +47,6 @@ export default function PaymentConfirmScreen({ route, navigation }) {
 
   const cancelPayment = () => {
     setShowConfirmDialog(false);
-  };
-
-  const processPayment = async (sessionId) => {
-    setIsProcessing(true);
-    try {
-      const response = await qrAPI.confirmPayment({
-        requestId: paymentRequest.id,
-        receiverCardId: receiverCard.id,
-        sessionId: sessionId, // Include OTP session ID
-      });
-
-      const { transaction } = response.data;
-
-      toastService.success(
-        'Payment Successful!',
-        `You have successfully paid N$ ${transaction.amount.toFixed(2)} to ${transaction.senderName}.`
-      );
-      
-      setTimeout(() => {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'MainTabs' }],
-        });
-      }, 2000);
-    } catch (error) {
-      console.error('Payment error:', error);
-      toastService.error(
-        'Payment Failed',
-        error.response?.data?.error || 'An error occurred during payment processing. Please try again.'
-      );
-    } finally {
-      setIsProcessing(false);
-    }
   };
 
   const formatDate = (dateString) => {
@@ -111,9 +82,9 @@ export default function PaymentConfirmScreen({ route, navigation }) {
           style={styles.header}
         >
           <View style={styles.headerContent}>
-            <Title style={styles.headerTitle}>Confirm Payment</Title>
+            <Title style={styles.headerTitle}>Confirm simulated payment</Title>
             <Paragraph style={styles.headerSubtitle}>
-              Review and confirm your payment details
+              Demo only. No real funds will be transferred.
             </Paragraph>
           </View>
         </LinearGradient>
@@ -256,7 +227,7 @@ export default function PaymentConfirmScreen({ route, navigation }) {
               },
             }}
           >
-            {isProcessing ? 'Processing...' : 'Confirm Payment'}
+            {isProcessing ? 'Processing...' : 'Confirm simulated payment'}
           </Button>
         </View>
 
@@ -267,9 +238,9 @@ export default function PaymentConfirmScreen({ route, navigation }) {
       {showConfirmDialog && (
         <View style={styles.overlay}>
           <View style={styles.confirmationDialog}>
-            <Text style={styles.dialogTitle}>Confirm Payment</Text>
+            <Text style={styles.dialogTitle}>Confirm simulated payment</Text>
             <Text style={styles.dialogMessage}>
-              Are you sure you want to pay N$ {paymentRequest.amount.toFixed(2)} to {paymentRequest.senderName}?
+              Simulate payment of N$ {paymentRequest.amount.toFixed(2)} to {paymentRequest.senderName}?
             </Text>
             <View style={styles.dialogButtons}>
               <Button
