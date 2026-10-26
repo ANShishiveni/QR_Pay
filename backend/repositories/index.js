@@ -53,7 +53,11 @@ function createMemoryRepository(seed = {}) {
 function createFirebaseRepository(realtimeDb) {
   return {
     kind: 'firebase',
-    async read(path = '') { segments(path); return (await realtimeDb.ref(path).get()).val(); },
+    async read(path = '') {
+      segments(path);
+      const ref = path ? realtimeDb.ref(path) : realtimeDb.ref();
+      return (await ref.get()).val();
+    },
     async transaction(updateFn) {
       const ref = realtimeDb.ref();
       const retainCache = () => {};

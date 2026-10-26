@@ -10,6 +10,12 @@ const databaseHost = process.env.FIREBASE_DATABASE_EMULATOR_HOST;
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
 assert.equal(databaseHost, '127.0.0.1:9000', 'Smoke tests may only touch the local RTDB emulator');
 assert.equal(authHost, '127.0.0.1:9099', 'Smoke tests may only touch the local Auth emulator');
+assert.equal(process.env.FIREBASE_PROJECT_ID, projectId, 'Smoke tests require the isolated demo project');
+// Firebase's Node ws:// transport ignores NO_PROXY. These tests have asserted
+// fixed loopback hosts, so remove only plaintext-proxy routing in this child.
+// HTTPS proxy routing and certificate verification remain unchanged.
+delete process.env.HTTP_PROXY;
+delete process.env.http_proxy;
 const namespace = `${projectId}-default-rtdb`;
 const runId = randomUUID();
 const databaseUrl = `http://${databaseHost}`;

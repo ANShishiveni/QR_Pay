@@ -3,7 +3,9 @@ set -euo pipefail
 
 qr_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 qr_tools="${NAMPAY_EMULATOR_TOOLS:-$qr_root/.cache/firebase-tools}"
-qr_cli_version="15.34.0"
+# 15.1 supports Node 24 and honors NO_PROXY for local emulator requests.
+# 15.34's unconditional Undici ProxyAgent routes loopback through egress.
+qr_cli_version="15.1.0"
 mkdir -p "$qr_tools"
 
 # Isolated tooling retains npm's TLS and package-integrity checks.

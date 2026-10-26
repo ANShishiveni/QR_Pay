@@ -1,6 +1,6 @@
 # NamPay 2.0 security decisions
 
-Status: Phase 1 implementation; automated isolated tests provide evidence. Real Realtime Database emulator concurrency/rules verification remains blocked by the emulator JAR download returning HTTP 403. A passing memory adapter test is not proof of Firebase behavior. This application remains a simulated-payment prototype.
+Status: Phase 1 implementation; automated isolated tests provide evidence. Real Realtime Database emulator concurrency/rules verification now passes, including eight API scenarios and competing confirmations. See docs/testing/EMULATORS.md for the reproducible command and scope. This application remains a simulated-payment prototype.
 
 ## Identity and authentication
 
@@ -52,4 +52,4 @@ API replies carry generated request IDs. Logs include only the request ID and st
 - `backend/tests/auth.activity.test.js`: authoritative minor-unit totals, private transaction/receipt reads, opposing roles, pagination/filtering, notification ownership and ambiguous legacy identities.
 - `backend/tests/foundation.test.js`: import without listeners, conditional memory commits/rollback, fail-closed runtime flags, and Firebase adapter cache/listener ordering with an SDK test double.
 - Payment/OTP tests cover the shared authorization and settlement invariants separately; see `docs/testing/TEST_MATRIX.md` for actual run results.
-- Not verified here: real provider delivery, physical-device SecureStore/biometrics, real Realtime Database emulator transactions/rules while its artifact is inaccessible, production security posture or PCI compliance. No live payment operation or SMS was performed.
+- Not verified here: real provider delivery, physical-device SecureStore/biometrics, production security posture or PCI compliance. No live payment operation or SMS was performed.

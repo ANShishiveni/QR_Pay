@@ -67,6 +67,18 @@ describe('runtime fail-closed configuration', () => {
 
 describe('Firebase adapter contract (SDK test double, not emulator evidence)', () => {
   const { createFirebaseRepository } = require('../repositories');
+  it('omits the empty root path rejected by the SDK and preserves explicit child paths', async () => {
+    const state = { users: { payer: { uid: 'payer' } } };
+    const ref = jest.fn(path => {
+      if (path === '') throw new Error('Firebase rejects an empty path');
+      return { get: async () => ({ val: () => path ? state.users.payer : state }) };
+    });
+    const repository = createFirebaseRepository({ ref });
+    expect(await repository.read()).toEqual(state);
+    expect(ref).toHaveBeenLastCalledWith();
+    expect(await repository.read('users/payer')).toEqual(state.users.payer);
+    expect(ref).toHaveBeenLastCalledWith('users/payer');
+  });
   function database() {
     const events = [];
     let data = { count: 1 };

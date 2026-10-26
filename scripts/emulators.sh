@@ -15,6 +15,10 @@ export GCLOUD_PROJECT=demo-nampay
 export FIREBASE_PROJECT_ID=demo-nampay
 export FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
 export FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1:9000
+# Only local emulator traffic bypasses the proxy. External downloads continue
+# through the existing HTTPS proxy with TLS and artifact checks intact.
+export NO_PROXY="${NO_PROXY:+$NO_PROXY,}127.0.0.1,localhost"
+export no_proxy="${no_proxy:+$no_proxy,}127.0.0.1,localhost"
 
 # Do not accept a real project or expose the emulators on a public interface.
 qr_mode="${1:-start}"
