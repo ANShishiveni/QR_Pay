@@ -1,256 +1,61 @@
-import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
-import {
-  TextInput,
-  Button,
-  Card,
-  Title,
-  Paragraph,
-  Text,
-  ActivityIndicator,
-} from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { AuthLayout, AppButton, AppText, AppTextField, FormError } from '../../components/ui';
 import { authAPI } from '../../config/api';
-import { theme, colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../context/AuthContext';
-import toastService from '../../services/toastService';
+import { emailError, errorMessage, normalizeEmail } from './authFormUtils';
 
 export default function LoginScreen({ navigation }) {
+  const { login, authError, checkAuthStatus } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
+  const [visible, setVisible] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [failure, setFailure] = useState('');
+  const submitting = useRef(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    setIsLoading(true);
+  const submit = async () => {
+    if (submitting.current) return;
+    const next = { email: emailError(email), password: password ? '' : 'Enter your password.' };
+    setErrors(next);
+    setFailure('');
+    if (Object.values(next).some(Boolean)) return;
+    submitting.current = true;
+    setBusy(true);
     try {
-
-      const response = await authAPI.login({ email: email.trim().toLowerCase(), password });
-
-      const { token, user } = response.data;
-
-      // Use AuthContext to handle login
-      await login(token, user);
-
-
-      // Show success message
-
-
-      toastService.success('Welcome Back!', 'Login successful');
+      const response = await authAPI.login({ email: normalizeEmail(email), password });
+      // Web uses its HttpOnly cookie; native receives a token for SecureStore.
+      await login(response.data.token);
+      setPassword('');
     } catch (error) {
-
-
-      const errorMessage = error.response?.data?.error || 'An error occurred during login';
-
-
-      toastService.error('Login Failed', errorMessage);
+      setFailure(errorMessage(error, 'We could not sign you in. Please try again.'));
     } finally {
-      setIsLoading(false);
+      submitting.current = false;
+      setBusy(false);
     }
   };
 
   return (
-    <LinearGradient
-      colors={[colors.primary, colors.primaryDark]}
-      style={styles.container}
+    <AuthLayout kicker="WELCOME BACK" title="Good to see you." subtitle="Sign in to your NamPay demo account."
+      footer={<View style={styles.footer}><AppText color="textSecondary">New to NamPay?</AppText><AppButton title="Create an account" variant="ghost" onPress={() => navigation.navigate('Register')} disabled={busy} /></View>}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Title style={styles.title}>QR Money Transfer</Title>
-            <Paragraph style={styles.subtitle}>
-              Secure cross-bank payments in Namibia
-            </Paragraph>
-          </View>
-
-          <Card style={styles.card}>
-            <Card.Content>
-              <Title style={styles.cardTitle}>Welcome Back</Title>
-              <Paragraph style={styles.cardSubtitle}>
-                Sign in to your account
-              </Paragraph>
-
-              <TextInput
-                label="Email"
-                value={email}
-                onChangeText={setEmail}
-                mode="outlined"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                style={styles.input}
-                theme={{
-                  colors: {
-                    primary: colors.primary,
-                  },
-                }}
-              />
-
-              <TextInput
-                label="Password"
-                value={password}
-                onChangeText={setPassword}
-                mode="outlined"
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                style={styles.input}
-                right={
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={24}
-                    color={colors.primary}
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.iconButton}
-                  />
-                }
-                theme={{
-                  colors: {
-                    primary: colors.primary,
-                  },
-                }}
-              />
-
-              <Button
-                mode="contained"
-                onPress={handleLogin}
-                loading={isLoading}
-                disabled={isLoading}
-                style={styles.loginButton}
-                contentStyle={styles.buttonContent}
-                theme={{
-                  colors: {
-                    primary: colors.primary,
-                  },
-                }}
-              >
-                {isLoading ? 'Signing In...' : 'Sign In'}
-              </Button>
-
-              <View style={styles.registerContainer}>
-                <Text style={styles.registerText}>Don't have an account? </Text>
-                <Button
-                  mode="text"
-                  onPress={() => navigation.navigate('Register')}
-                  labelStyle={styles.registerButton}
-                >
-                  Sign Up
-                </Button>
-              </View>
-            </Card.Content>
-          </Card>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              This is a prototype application for demonstration purposes.
-              All transactions are simulated using sandbox APIs.
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+      {authError ? <><FormError message={authError} /><AppButton title="Retry session check" variant="secondary" onPress={checkAuthStatus} disabled={busy} /></> : null}
+      <FormError message={failure} />
+      <AppTextField label="Email address" value={email} onChangeText={value => { setEmail(value); setErrors(current => ({ ...current, email: '' })); }} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" editable={!busy} returnKeyType="next" />
+      <AppTextField label="Password" value={password} onChangeText={value => { setPassword(value); setErrors(current => ({ ...current, password: '' })); }} error={errors.password} secureTextEntry={!visible} autoCapitalize="none" autoCorrect={false} autoComplete="current-password" textContentType="password" editable={!busy} returnKeyType="go" onSubmitEditing={submit} />
+      <View style={styles.actions}>
+        <AppButton title={visible ? 'Hide password' : 'Show password'} icon={visible ? 'eye-off-outline' : 'eye-outline'} variant="ghost" onPress={() => setVisible(value => !value)} disabled={busy} />
+        <AppButton title="Forgot password?" variant="ghost" onPress={() => navigation.navigate('ForgotPassword')} disabled={busy} />
+      </View>
+      <AppButton title="Sign in" icon="arrow-forward" onPress={submit} loading={busy} disabled={busy} />
+      <AppText variant="caption" color="textSecondary" style={styles.note}>A safe place to explore QR payments. No real funds move.</AppText>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  title: {
-    fontSize: typography.h1.fontSize,
-    fontWeight: typography.h1.fontWeight,
-    color: colors.white,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: typography.body1.fontSize,
-    color: colors.white,
-    textAlign: 'center',
-    opacity: 0.9,
-  },
-  card: {
-    elevation: 8,
-    borderRadius: 16,
-    marginBottom: spacing.lg,
-  },
-  cardTitle: {
-    fontSize: typography.h2.fontSize,
-    fontWeight: typography.h2.fontWeight,
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  cardSubtitle: {
-    fontSize: typography.body2.fontSize,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  input: {
-    marginBottom: spacing.md,
-  },
-  loginButton: {
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  buttonContent: {
-    paddingVertical: spacing.sm,
-  },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  registerText: {
-    fontSize: typography.body2.fontSize,
-    color: colors.textSecondary,
-  },
-  registerButton: {
-    color: colors.primary,
-    fontSize: typography.body2.fontSize,
-  },
-  footer: {
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  footerText: {
-    fontSize: typography.caption.fontSize,
-    color: colors.white,
-    textAlign: 'center',
-    opacity: 0.8,
-    lineHeight: typography.caption.lineHeight,
-  },
-  iconButton: {
-    padding: 8,
-    cursor: 'pointer',
-  },
+  actions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
+  footer: { alignItems: 'center', gap: 4 },
+  note: { textAlign: 'center', marginTop: 4 },
 });

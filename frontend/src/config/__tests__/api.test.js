@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import apiClient, { otpAPI, qrAPI } from '../api';
+import apiClient, { authAPI, otpAPI, qrAPI } from '../api';
 import sessionStorage from '../../services/storage/sessionStorage';
 import { onSessionExpired } from '../../services/sessionEvents';
 
@@ -47,6 +47,21 @@ test('unauthorized API response expires the local session and hides transport se
   try {
     await expect(qrAPI.getRequests()).rejects.toMatchObject({ response: { status: 401 } });
     expect(expired).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.clearToken).toHaveBeenCalledTimes(1);
+  } finally { unsubscribe(); }
+});
+
+test('a guest verification response stays with the startup verifier instead of broadcasting session expiry', async () => {
+  const expired = jest.fn();
+  const unsubscribe = onSessionExpired(expired);
+  apiClient.defaults.adapter = async config => {
+    throw Object.assign(new Error('No session'), {
+      config, response: { status: 401, data: { code: 'UNAUTHORIZED' } },
+    });
+  };
+  try {
+    await expect(authAPI.verifyToken()).rejects.toMatchObject({ response: { status: 401 } });
+    expect(expired).not.toHaveBeenCalled();
     expect(sessionStorage.clearToken).toHaveBeenCalledTimes(1);
   } finally { unsubscribe(); }
 });

@@ -3,12 +3,12 @@
   "blueprint": "BLUEPRINT.md",
   "branch": "feat/nampay-2",
   "baselineCommit": "998d2ec571289edbf777a52d9edea50652cf257b",
-  "updatedAt": "2026-10-21T05:58:53.769Z",
+  "updatedAt": "2026-10-26T11:29:28.733936+00:00",
   "phases": [
     {
       "phase": 0,
       "title": "Baseline and isolated development",
-      "status": "Baseline gate passed; RTDB emulator blocked",
+      "status": "Baseline and real emulator gates passed",
       "tasks": [
         {
           "id": "P0-01",
@@ -21,13 +21,14 @@
         },
         {
           "id": "P0-02",
-          "status": "Blocked",
+          "status": "Done",
           "evidence": [
-            "Pinned Firebase CLI installed; real Auth emulator registration/login/rejections passed",
-            "RTDB download403 at storage.googleapis.com; network draft saved"
+            "Firebase CLI15.1.0; real Auth+RTDB smoke exit0",
+            "Repository CRUD,12 concurrent updates,abort,anonymous/authenticated denial",
+            "Eight real-RTDB API scenarios including payment concurrency,replay,cancel race,logout"
           ],
           "commit": "4f8fcc9e",
-          "nextAction": "Apply saved domain and run full emulator suite"
+          "nextAction": "Retain emulator regression coverage"
         },
         {
           "id": "P0-03",
@@ -53,17 +54,18 @@
     {
       "phase": 1,
       "title": "Security and core integrity",
-      "status": "Local security gate passed; emulator/native verification pending",
+      "status": "Backend security and real Firebase gates passed; native session verification pending",
       "tasks": [
         {
           "id": "P1-01",
           "status": "Needs verification",
           "evidence": [
             "Backend87/87; frontend46/46; TypeScript pass",
-            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed",
+            "Browser onboarding,registration,HttpOnly isolation,reload andlogout passed"
           ],
-          "commit": null,
-          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
+          "commit": "d84d31a6",
+          "nextAction": "Physical Android SecureStore/restart verification remains unavailable"
         },
         {
           "id": "P1-02",
@@ -72,38 +74,41 @@
             "Backend87/87; frontend46/46; TypeScript pass",
             "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
           ],
-          "commit": null,
+          "commit": "d84d31a6",
           "nextAction": "Retain regression coverage"
         },
         {
           "id": "P1-03",
-          "status": "Needs verification",
+          "status": "Done",
           "evidence": [
             "Backend87/87; frontend46/46; TypeScript pass",
-            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed",
+            "Real Firebase gate:8 API scenarios;8 concurrent confirmations created exactly1 canonical transaction;rule denial passed"
           ],
-          "commit": null,
-          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
+          "commit": "d84d31a6",
+          "nextAction": "Retain memory and real Firebase regression coverage"
         },
         {
           "id": "P1-04",
-          "status": "Needs verification",
+          "status": "Done",
           "evidence": [
             "Backend87/87; frontend46/46; TypeScript pass",
-            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed",
+            "Real Firebase gate:8 API scenarios;8 concurrent confirmations created exactly1 canonical transaction;rule denial passed"
           ],
-          "commit": null,
-          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
+          "commit": "d84d31a6",
+          "nextAction": "Retain memory and real Firebase regression coverage"
         },
         {
           "id": "P1-05",
-          "status": "Needs verification",
+          "status": "Done",
           "evidence": [
             "Backend87/87; frontend46/46; TypeScript pass",
-            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed",
+            "Real Firebase gate:8 API scenarios;8 concurrent confirmations created exactly1 canonical transaction;rule denial passed"
           ],
-          "commit": null,
-          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
+          "commit": "d84d31a6",
+          "nextAction": "Retain memory and real Firebase regression coverage"
         },
         {
           "id": "P1-06",
@@ -112,7 +117,7 @@
             "Backend87/87; frontend46/46; TypeScript pass",
             "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
           ],
-          "commit": null,
+          "commit": "d84d31a6",
           "nextAction": "Retain regression coverage"
         },
         {
@@ -122,7 +127,7 @@
             "Backend87/87; frontend46/46; TypeScript pass",
             "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
           ],
-          "commit": null,
+          "commit": "d84d31a6",
           "nextAction": "Retain regression coverage"
         },
         {
@@ -132,85 +137,101 @@
             "Backend87/87; frontend46/46; TypeScript pass",
             "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
           ],
-          "commit": null,
-          "nextAction": "Complete real RTDB/native/browser validation with later phase gates"
+          "commit": "d84d31a6",
+          "nextAction": "Complete browser uncertain-outcome and native device cases in later phases"
         }
       ]
     },
     {
       "phase": 2,
       "title": "Design system and application shell",
-      "status": "In progress",
+      "status": "Component/browser gate passed; native visual verification pending",
       "tasks": [
         {
           "id": "P2-01",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "85 frontend tests across 10 suites passed; TypeScript passed",
+            "Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots",
+            "Production web compilation passed; docs/design/DESIGN_SYSTEM.md"
+          ],
           "commit": null,
-          "nextAction": "Implement shared UI and verify components/screens"
+          "nextAction": "Retain component coverage; complete native visual/accessibility checks in Phase 5/6"
         },
         {
           "id": "P2-02",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "85 frontend tests across 10 suites passed; TypeScript passed",
+            "Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots",
+            "Production web compilation passed; docs/design/DESIGN_SYSTEM.md"
+          ],
           "commit": null,
-          "nextAction": "Implement shared UI and verify components/screens"
+          "nextAction": "Retain component coverage; complete native visual/accessibility checks in Phase 5/6"
         },
         {
           "id": "P2-03",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "85 frontend tests across 10 suites passed; TypeScript passed",
+            "Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots",
+            "Production web compilation passed; docs/design/DESIGN_SYSTEM.md"
+          ],
           "commit": null,
-          "nextAction": "Implement shared UI and verify components/screens"
+          "nextAction": "Retain component coverage; complete native visual/accessibility checks in Phase 5/6"
         },
         {
           "id": "P2-04",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "85 frontend tests across 10 suites passed; TypeScript passed",
+            "Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots",
+            "Production web compilation passed; docs/design/DESIGN_SYSTEM.md"
+          ],
           "commit": null,
-          "nextAction": "Implement shared UI and verify components/screens"
+          "nextAction": "Retain component coverage; complete native visual/accessibility checks in Phase 5/6"
         }
       ]
     },
     {
       "phase": 3,
       "title": "QR and payment journeys",
-      "status": "Not started",
+      "status": "In progress",
       "tasks": [
         {
           "id": "P3-01",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement and verify request/scanner/payment journeys"
         },
         {
           "id": "P3-02",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement and verify request/scanner/payment journeys"
         },
         {
           "id": "P3-03",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement and verify request/scanner/payment journeys"
         },
         {
           "id": "P3-04",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement and verify request/scanner/payment journeys"
         },
         {
           "id": "P3-05",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement and verify request/scanner/payment journeys"
         }
       ]
     },
@@ -331,6 +352,6 @@
     "Physical Android/iOS device validation has not run.",
     "GitHub open PR query returned HTTP 403; HTTPS Git read access works.",
     "No real provider credentials or production data will be used.",
-    "RTDB emulator artifact access blocked403; storage.googleapis.com requirement saved to cloud configuration draft but not applied."
+    "Android CLI installed and verified; SDK platform/build tools require SDK license acceptance. No physical device or KVM is available."
   ]
 }

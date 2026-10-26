@@ -31,7 +31,10 @@ apiClient.interceptors.request.use(async (config) => {
 const publicAuthPaths = new Set(['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']);
 apiClient.interceptors.response.use(response => response, async error => {
   if (error.response?.status === 401 && !publicAuthPaths.has(error.config?.url)) {
-    notifySessionExpired();
+    // The startup verifier owns its result. A new browser without a cookie is
+    // an ordinary guest, not an expired session; broadcasting here also races
+    // AuthContext's in-flight verification guard.
+    if (error.config?.url !== '/auth/verify') notifySessionExpired();
     try { await sessionStorage.clearToken(); } catch { /* UI still fails closed. */ }
   }
   // No automatic retries of writes: reconcile uncertain payments by request ID.
