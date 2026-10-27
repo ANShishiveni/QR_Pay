@@ -3,7 +3,7 @@
   "blueprint": "BLUEPRINT.md",
   "branch": "feat/nampay-2",
   "baselineCommit": "998d2ec571289edbf777a52d9edea50652cf257b",
-  "updatedAt": "2026-10-26T11:29:28.733936+00:00",
+  "updatedAt": "2026-10-27T07:36:09.007418+00:00",
   "phases": [
     {
       "phase": 0,
@@ -135,7 +135,8 @@
           "status": "Needs verification",
           "evidence": [
             "Backend87/87; frontend46/46; TypeScript pass",
-            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed"
+            "Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed",
+            "Browser T-16 response loss after server commit reconciled one canonical result without a second confirmation"
           ],
           "commit": "d84d31a6",
           "nextAction": "Complete browser uncertain-outcome and native device cases in later phases"
@@ -155,7 +156,7 @@
             "Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots",
             "Production web compilation passed; docs/design/DESIGN_SYSTEM.md"
           ],
-          "commit": null,
+          "commit": "67eb978c",
           "nextAction": "Retain component coverage; complete native visual/accessibility checks in Phase 5/6"
         },
         {
@@ -166,7 +167,7 @@
             "Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots",
             "Production web compilation passed; docs/design/DESIGN_SYSTEM.md"
           ],
-          "commit": null,
+          "commit": "67eb978c",
           "nextAction": "Retain component coverage; complete native visual/accessibility checks in Phase 5/6"
         },
         {
@@ -177,7 +178,7 @@
             "Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots",
             "Production web compilation passed; docs/design/DESIGN_SYSTEM.md"
           ],
-          "commit": null,
+          "commit": "67eb978c",
           "nextAction": "Retain component coverage; complete native visual/accessibility checks in Phase 5/6"
         },
         {
@@ -188,7 +189,7 @@
             "Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots",
             "Production web compilation passed; docs/design/DESIGN_SYSTEM.md"
           ],
-          "commit": null,
+          "commit": "67eb978c",
           "nextAction": "Retain component coverage; complete native visual/accessibility checks in Phase 5/6"
         }
       ]
@@ -196,77 +197,97 @@
     {
       "phase": 3,
       "title": "QR and payment journeys",
-      "status": "In progress",
+      "status": "Browser/component gate passed; native cross-device checks pending",
       "tasks": [
         {
           "id": "P3-01",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "181 frontend tests across 17 suites; TypeScript passed",
+            "Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts",
+            "Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify request/scanner/payment journeys"
+          "nextAction": "Retain regression coverage; native camera/share/device checks pending"
         },
         {
           "id": "P3-02",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "181 frontend tests across 17 suites; TypeScript passed",
+            "Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts",
+            "Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify request/scanner/payment journeys"
+          "nextAction": "Retain regression coverage; native camera/share/device checks pending"
         },
         {
           "id": "P3-03",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "181 frontend tests across 17 suites; TypeScript passed",
+            "Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts",
+            "Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify request/scanner/payment journeys"
+          "nextAction": "Retain regression coverage; native camera/share/device checks pending"
         },
         {
           "id": "P3-04",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "181 frontend tests across 17 suites; TypeScript passed",
+            "Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts",
+            "Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify request/scanner/payment journeys"
+          "nextAction": "Retain regression coverage; native camera/share/device checks pending"
         },
         {
           "id": "P3-05",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "181 frontend tests across 17 suites; TypeScript passed",
+            "Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts",
+            "Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass"
+          ],
           "commit": null,
-          "nextAction": "Implement and verify request/scanner/payment journeys"
+          "nextAction": "Retain regression coverage; native camera/share/device checks pending"
         }
       ]
     },
     {
       "phase": 4,
       "title": "Dashboard, cards, activity and receipts",
-      "status": "Not started",
+      "status": "In progress",
       "tasks": [
         {
           "id": "P4-01",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement and verify main feature screens and account settings"
         },
         {
           "id": "P4-02",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement and verify main feature screens and account settings"
         },
         {
           "id": "P4-03",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement and verify main feature screens and account settings"
         },
         {
           "id": "P4-04",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Implement and verify main feature screens and account settings"
         }
       ]
     },

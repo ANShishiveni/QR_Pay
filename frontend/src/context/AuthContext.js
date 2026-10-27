@@ -16,16 +16,20 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRevalidating, setIsRevalidating] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [expiresAt, setExpiresAt] = useState(null);
   const operation = useRef(0);
+  const verifiedUser = useRef(null);
 
   const lockSession = useCallback(() => {
     operation.current += 1;
     clearSessionCache();
+    verifiedUser.current = null;
     setUser(null);
     setExpiresAt(null);
     setIsLoading(false);
+    setIsRevalidating(false);
   }, []);
 
   const acceptVerifiedSession = useCallback((data) => {
@@ -34,14 +38,17 @@ export const AuthProvider = ({ children }) => {
     }
     const expiry = sessionExpiry(data.expiresAt);
     setPreferenceUser(data.user.uid);
+    verifiedUser.current = data.user;
     setUser(data.user);
     setExpiresAt(expiry);
     setAuthError(null);
   }, []);
 
-  const checkAuthStatus = useCallback(async () => {
+  const checkAuthStatus = useCallback(async ({ background = false } = {}) => {
+    const preserveNavigation = background && Boolean(verifiedUser.current);
     const current = ++operation.current;
-    setIsLoading(true);
+    if (preserveNavigation) setIsRevalidating(true);
+    else setIsLoading(true);
     setAuthError(null);
     try {
       // An interrupted web logout must not revive the still-present cookie.
@@ -62,15 +69,23 @@ export const AuthProvider = ({ children }) => {
       if (operation.current === current) acceptVerifiedSession(response.data);
     } catch (error) {
       if (operation.current === current) {
-        clearSessionCache();
-        setUser(null);
-        setExpiresAt(null);
-        if (error.response?.status !== 401) {
+        if (preserveNavigation && error.response?.status !== 401) {
+          // Keep an already verified, unexpired navigation state on temporary
+          // connectivity loss. Every mutation still requires server approval;
+          // the local expiry timer and definitive 401 both lock immediately.
+          setAuthError('Reconnect to verify your session and refresh the latest status.');
+        } else {
+          clearSessionCache();
+          verifiedUser.current = null;
+          setUser(null);
+          setExpiresAt(null);
+        }
+        if (!preserveNavigation && error.response?.status !== 401) {
           setAuthError('Your session could not be verified. Check your connection and try again.');
         }
       }
     } finally {
-      if (operation.current === current) setIsLoading(false);
+      if (operation.current === current) { setIsLoading(false); setIsRevalidating(false); }
     }
   }, [acceptVerifiedSession, lockSession]);
 
@@ -117,7 +132,7 @@ export const AuthProvider = ({ children }) => {
     });
     checkAuthStatus();
     const subscription = AppState.addEventListener('change', state => {
-      if (state === 'active') checkAuthStatus();
+      if (state === 'active' && verifiedUser.current) checkAuthStatus({ background: true });
     });
     return () => { operation.current += 1; unsubscribe(); subscription.remove(); };
   }, [checkAuthStatus, lockSession]);
@@ -134,7 +149,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{
-      isAuthenticated: Boolean(user), isLoading, user, authError, expiresAt,
+      isAuthenticated: Boolean(user), isLoading, isRevalidating, user, authError, expiresAt,
       login, logout, checkAuthStatus,
     }}>
       {children}

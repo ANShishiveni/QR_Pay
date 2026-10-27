@@ -106,3 +106,30 @@ test('unmount removes the native lifecycle listener', async () => {
   view.unmount();
   expect(removeAppStateListener).toHaveBeenCalledTimes(1);
 });
+
+test('resume preserves a verified payment navigation state during revalidation and temporary network loss', async () => {
+  const view = render(<AuthProvider><Probe /></AuthProvider>);
+  await waitFor(() => expect(view.getByText('synthetic-payer')).toBeTruthy());
+  let rejectVerification;
+  authAPI.verifyToken.mockImplementationOnce(() => new Promise((resolve, reject) => { rejectVerification = reject; }));
+  const resume = AppState.addEventListener.mock.calls.at(-1)[1];
+  act(() => resume('active'));
+  expect(session.isLoading).toBe(false);
+  expect(session.isRevalidating).toBe(true);
+  expect(view.getByText('synthetic-payer')).toBeTruthy();
+  await waitFor(() => expect(typeof rejectVerification).toBe('function'));
+  await act(async () => { rejectVerification(new Error('offline')); });
+  expect(session.isAuthenticated).toBe(true);
+  expect(session.authError).toContain('Reconnect');
+  expect(session.isRevalidating).toBe(false);
+});
+
+test('a definitive revoked session on resume removes authenticated state', async () => {
+  const view = render(<AuthProvider><Probe /></AuthProvider>);
+  await waitFor(() => expect(view.getByText('synthetic-payer')).toBeTruthy());
+  authAPI.verifyToken.mockRejectedValueOnce({ response: { status: 401 } });
+  await act(async () => { await session.checkAuthStatus({ background: true }); });
+  expect(view.getByText('signed out')).toBeTruthy();
+  expect(session.isAuthenticated).toBe(false);
+  expect(session.expiresAt).toBeNull();
+});

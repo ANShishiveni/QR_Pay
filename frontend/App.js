@@ -22,12 +22,16 @@ import BiometricAuthScreen from './src/screens/auth/BiometricAuthScreen';
 import HomeScreen from './src/screens/main/HomeScreen';
 import QRGenerateScreen from './src/screens/qr/QRGenerateScreen';
 import QRScanScreen from './src/screens/qr/QRScanScreen';
+import QRRequestsScreen from './src/screens/qr/QRRequestsScreen';
+import QRRequestDetailsScreen from './src/screens/qr/QRRequestDetailsScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import MyProfileScreen from './src/screens/profile/MyProfileScreen';
 import CardsScreen from './src/screens/profile/CardsScreen';
 import TransactionsScreen from './src/screens/profile/TransactionsScreen';
 import SettingsScreen from './src/screens/profile/SettingsScreen';
 import PaymentConfirmScreen from './src/screens/payment/PaymentConfirmScreen';
+import PaymentsScreen from './src/screens/payment/PaymentsScreen';
+import PaymentResultScreen from './src/screens/payment/PaymentResultScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -56,7 +60,7 @@ export function MainTabs() {
     sceneStyle: { backgroundColor: colors.background },
   })}>
     <Tab.Screen name="Home" component={HomeScreen} />
-    <Tab.Screen name="Payments" component={QRGenerateScreen} />
+    <Tab.Screen name="Payments" component={PaymentsScreen} />
     <Tab.Screen name="Activity" component={TransactionsScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>;
@@ -95,7 +99,10 @@ export function AppContent() {
         <Stack.Screen name="QR" component={QRGenerateScreen} />
         <Stack.Screen name="QRGenerate" component={QRGenerateScreen} />
         <Stack.Screen name="QRScan" component={QRScanScreen} />
+        <Stack.Screen name="QRRequests" component={QRRequestsScreen} />
+        <Stack.Screen name="QRRequestDetails" component={QRRequestDetailsScreen} />
         <Stack.Screen name="PaymentConfirm" component={PaymentConfirmScreen} />
+        <Stack.Screen name="PaymentResult" component={PaymentResultScreen} />
         <Stack.Screen name="Cards" component={CardsScreen} />
         <Stack.Screen name="MyProfile" component={MyProfileScreen} />
         <Stack.Screen name="Transactions" component={TransactionsScreen} />

@@ -9,6 +9,13 @@ const { chromium } = require('playwright');
 
 const webOrigin = process.env.NAMPAY_WEB_ORIGIN || 'http://localhost:19006';
 const apiOrigin = process.env.NAMPAY_SMOKE_API || 'http://localhost:3000';
+const privateValues = new Set();
+const protect = value => { if (typeof value === 'string' && value) privateValues.add(value); return value; };
+const safeFailure = error => {
+  let message = String(error?.message || 'Browser verification failed');
+  for (const value of privateValues) message = message.split(value).join('[private test value]');
+  return message;
+};
 for (const origin of [webOrigin, apiOrigin]) {
   assert.equal(new URL(origin).hostname, 'localhost', 'Browser tests require a disposable localhost environment');
 }
@@ -43,4 +50,4 @@ async function assertNoHorizontalOverflow(page) {
   assert.equal(overflow, false, 'The screen must fit its viewport');
 }
 
-module.exports = { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreenshot, assertNoHorizontalOverflow };
+module.exports = { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreenshot, assertNoHorizontalOverflow, protect, safeFailure };

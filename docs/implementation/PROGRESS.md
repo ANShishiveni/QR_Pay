@@ -4,7 +4,7 @@ Branch: `feat/nampay-2` · Baseline: `998d2ec571289edbf777a52d9edea50652cf257b`
 
 Machine-readable source: [progress.json](progress.json). Tasks become Done only after their evidence and acceptance criteria are verified.
 
-Updated: 2026-10-26T11:29:28.733936+00:00
+Updated: 2026-10-27T07:36:09.007418+00:00
 
 ## Phase 0 — Baseline and isolated development
 
@@ -30,7 +30,7 @@ Status: **Backend security and real Firebase gates passed; native session verifi
 | P1-05 | Done | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed; Real Firebase gate:8 API scenarios;8 concurrent confirmations created exactly1 canonical transaction;rule denial passed | d84d31a6 | Retain memory and real Firebase regression coverage |
 | P1-06 | Done | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | d84d31a6 | Retain regression coverage |
 | P1-07 | Done | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | d84d31a6 | Retain regression coverage |
-| P1-08 | Needs verification | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | d84d31a6 | Complete browser uncertain-outcome and native device cases in later phases |
+| P1-08 | Needs verification | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed; Browser T-16 response loss after server commit reconciled one canonical result without a second confirmation | d84d31a6 | Complete browser uncertain-outcome and native device cases in later phases |
 
 ## Phase 2 — Design system and application shell
 
@@ -38,33 +38,33 @@ Status: **Component/browser gate passed; native visual verification pending**
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P2-01 | Done | 85 frontend tests across 10 suites passed; TypeScript passed; Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots; Production web compilation passed; docs/design/DESIGN_SYSTEM.md | Working tree | Retain component coverage; complete native visual/accessibility checks in Phase 5/6 |
-| P2-02 | Done | 85 frontend tests across 10 suites passed; TypeScript passed; Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots; Production web compilation passed; docs/design/DESIGN_SYSTEM.md | Working tree | Retain component coverage; complete native visual/accessibility checks in Phase 5/6 |
-| P2-03 | Needs verification | 85 frontend tests across 10 suites passed; TypeScript passed; Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots; Production web compilation passed; docs/design/DESIGN_SYSTEM.md | Working tree | Retain component coverage; complete native visual/accessibility checks in Phase 5/6 |
-| P2-04 | Done | 85 frontend tests across 10 suites passed; TypeScript passed; Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots; Production web compilation passed; docs/design/DESIGN_SYSTEM.md | Working tree | Retain component coverage; complete native visual/accessibility checks in Phase 5/6 |
+| P2-01 | Done | 85 frontend tests across 10 suites passed; TypeScript passed; Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots; Production web compilation passed; docs/design/DESIGN_SYSTEM.md | 67eb978c | Retain component coverage; complete native visual/accessibility checks in Phase 5/6 |
+| P2-02 | Done | 85 frontend tests across 10 suites passed; TypeScript passed; Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots; Production web compilation passed; docs/design/DESIGN_SYSTEM.md | 67eb978c | Retain component coverage; complete native visual/accessibility checks in Phase 5/6 |
+| P2-03 | Needs verification | 85 frontend tests across 10 suites passed; TypeScript passed; Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots; Production web compilation passed; docs/design/DESIGN_SYSTEM.md | 67eb978c | Retain component coverage; complete native visual/accessibility checks in Phase 5/6 |
+| P2-04 | Done | 85 frontend tests across 10 suites passed; TypeScript passed; Browser: onboarding, registration, private recovery, HttpOnly session, reload/logout; compact light/wide dark screenshots; Production web compilation passed; docs/design/DESIGN_SYSTEM.md | 67eb978c | Retain component coverage; complete native visual/accessibility checks in Phase 5/6 |
 
 ## Phase 3 — QR and payment journeys
+
+Status: **Browser/component gate passed; native cross-device checks pending**
+
+| Task | Status | Evidence | Commit / PR | Next action |
+| --- | --- | --- | --- | --- |
+| P3-01 | Needs verification | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
+| P3-02 | Done | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
+| P3-03 | Needs verification | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
+| P3-04 | Done | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
+| P3-05 | Done | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
+
+## Phase 4 — Dashboard, cards, activity and receipts
 
 Status: **In progress**
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P3-01 | In progress | Not verified | Working tree | Implement and verify request/scanner/payment journeys |
-| P3-02 | In progress | Not verified | Working tree | Implement and verify request/scanner/payment journeys |
-| P3-03 | In progress | Not verified | Working tree | Implement and verify request/scanner/payment journeys |
-| P3-04 | In progress | Not verified | Working tree | Implement and verify request/scanner/payment journeys |
-| P3-05 | In progress | Not verified | Working tree | Implement and verify request/scanner/payment journeys |
-
-## Phase 4 — Dashboard, cards, activity and receipts
-
-Status: **Not started**
-
-| Task | Status | Evidence | Commit / PR | Next action |
-| --- | --- | --- | --- | --- |
-| P4-01 | Not started | Not verified | Working tree | Await previous phase gate |
-| P4-02 | Not started | Not verified | Working tree | Await previous phase gate |
-| P4-03 | Not started | Not verified | Working tree | Await previous phase gate |
-| P4-04 | Not started | Not verified | Working tree | Await previous phase gate |
+| P4-01 | In progress | Not verified | Working tree | Implement and verify main feature screens and account settings |
+| P4-02 | In progress | Not verified | Working tree | Implement and verify main feature screens and account settings |
+| P4-03 | In progress | Not verified | Working tree | Implement and verify main feature screens and account settings |
+| P4-04 | In progress | Not verified | Working tree | Implement and verify main feature screens and account settings |
 
 ## Phase 5 — Reliability, accessibility and notifications
 

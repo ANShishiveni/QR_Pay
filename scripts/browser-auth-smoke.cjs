@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreenshot, assertNoHorizontalOverflow } = require('./browser-helpers.cjs');
+const { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreenshot, assertNoHorizontalOverflow, protect, safeFailure } = require('./browser-helpers.cjs');
 
 (async () => {
   await requireDisposableApi();
@@ -27,7 +27,7 @@ const { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreensho
     await page.getByRole('heading', { name: 'Your demo starts here.' }).waitFor();
     await saveScreenshot(page, 'auth-register-light-compact');
 
-    const password = crypto.randomBytes(24).toString('base64url');
+    const password = protect(crypto.randomBytes(24).toString('base64url'));
     const email = `browser-${crypto.randomUUID()}@example.test`;
     await page.getByLabel('First name', { exact: true }).filter({ visible: true }).fill('Synthetic');
     await page.getByLabel('Last name', { exact: true }).filter({ visible: true }).fill('Browser');
@@ -45,6 +45,7 @@ const { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreensho
     const cookies = await context.cookies(`${apiOrigin}/api/auth/verify`);
     const session = cookies.find(cookie => cookie.name === 'nampay_session');
     assert.ok(session);
+    protect(session.value);
     assert.equal(session.httpOnly, true);
     assert.equal(session.sameSite, 'Strict');
     assert.equal(session.path, '/api');
@@ -84,8 +85,8 @@ const { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreensho
     }
     assert.ok(recovery?.simulated, 'A private mock recovery delivery must exist for this synthetic account');
     await page.getByRole('button', { name: 'I have recovery instructions', exact: true }).click();
-    await page.getByLabel('Recovery code', { exact: true }).filter({ visible: true }).fill(recovery.token);
-    const replacement = crypto.randomBytes(24).toString('base64url');
+    await page.getByLabel('Recovery code', { exact: true }).filter({ visible: true }).fill(protect(recovery.token));
+    const replacement = protect(crypto.randomBytes(24).toString('base64url'));
     await page.getByLabel('New password', { exact: true }).fill(replacement);
     await page.getByLabel('Confirm new password', { exact: true }).fill(replacement);
     await page.getByRole('button', { name: 'Reset password', exact: true }).click();
@@ -100,4 +101,4 @@ const { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreensho
     console.log('PASS: onboarding, compact/wide auth, validation, registration, four tabs, HttpOnly isolation, reload, logout, private recovery and sign-in with the changed password.');
     await context.close();
   } finally { await browser.close(); }
-})().catch(error => { console.error(error.message); process.exitCode = 1; });
+})().catch(error => { console.error(safeFailure(error)); process.exitCode = 1; });
