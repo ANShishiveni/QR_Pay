@@ -3,7 +3,7 @@
   "blueprint": "BLUEPRINT.md",
   "branch": "feat/nampay-2",
   "baselineCommit": "998d2ec571289edbf777a52d9edea50652cf257b",
-  "updatedAt": "2026-10-28T15:39:41.100636+00:00",
+  "updatedAt": "2026-10-28T22:45:33.020670+00:00",
   "phases": [
     {
       "phase": 0,
@@ -269,7 +269,7 @@
             "90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed",
             "Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md"
           ],
-          "commit": null,
+          "commit": "442968ca",
           "nextAction": "Native share/photo/biometric acceptance remains unavailable; retain automated coverage"
         },
         {
@@ -280,7 +280,7 @@
             "90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed",
             "Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md"
           ],
-          "commit": null,
+          "commit": "442968ca",
           "nextAction": "Native share/photo/biometric acceptance remains unavailable; retain automated coverage"
         },
         {
@@ -291,7 +291,7 @@
             "90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed",
             "Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md"
           ],
-          "commit": null,
+          "commit": "442968ca",
           "nextAction": "Native share/photo/biometric acceptance remains unavailable; retain automated coverage"
         },
         {
@@ -302,7 +302,7 @@
             "90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed",
             "Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md"
           ],
-          "commit": null,
+          "commit": "442968ca",
           "nextAction": "Native share/photo/biometric acceptance remains unavailable; retain automated coverage"
         }
       ]
@@ -310,77 +310,97 @@
     {
       "phase": 5,
       "title": "Reliability, accessibility and notifications",
-      "status": "In progress",
+      "status": "Automated/browser gates passed; native accessibility and hardware acceptance pending",
       "tasks": [
         {
           "id": "P5-01",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed",
+            "Backend92tests/6suites passed incl notification expiry/ownership/dedup",
+            "Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed",
+            "docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved"
+          ],
           "commit": null,
-          "nextAction": "Implement offline recovery, in-app inbox and accessibility fixes"
+          "nextAction": "Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage"
         },
         {
           "id": "P5-02",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed",
+            "Backend92tests/6suites passed incl notification expiry/ownership/dedup",
+            "Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed",
+            "docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved"
+          ],
           "commit": null,
-          "nextAction": "Implement offline recovery, in-app inbox and accessibility fixes"
+          "nextAction": "Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage"
         },
         {
           "id": "P5-03",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed",
+            "Backend92tests/6suites passed incl notification expiry/ownership/dedup",
+            "Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed",
+            "docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved"
+          ],
           "commit": null,
-          "nextAction": "Implement offline recovery, in-app inbox and accessibility fixes"
+          "nextAction": "Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage"
         },
         {
           "id": "P5-04",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed",
+            "Backend92tests/6suites passed incl notification expiry/ownership/dedup",
+            "Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed",
+            "docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved"
+          ],
           "commit": null,
-          "nextAction": "Implement offline recovery, in-app inbox and accessibility fixes"
+          "nextAction": "Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage"
         }
       ]
     },
     {
       "phase": 6,
       "title": "QA, CI and release documentation",
-      "status": "Not started",
+      "status": "In progress",
       "tasks": [
         {
           "id": "P6-01",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
         },
         {
           "id": "P6-02",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
         },
         {
           "id": "P6-03",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
         },
         {
           "id": "P6-04",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
         },
         {
           "id": "P6-05",
-          "status": "Not started",
+          "status": "In progress",
           "evidence": [],
           "commit": null,
-          "nextAction": "Await previous phase gate"
+          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
         }
       ]
     }

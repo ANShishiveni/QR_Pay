@@ -18,7 +18,7 @@ export default function QRRequestsScreen({ navigation }) {
     <AppButton title="Request a payment" icon="add-outline" onPress={() => navigation.navigate('QRGenerate')} />
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
       {filters.map(([key, label]) => <AppButton key={key} title={label} variant={filter === key ? 'primary' : 'secondary'}
-        accessibilityLabel={`Filter requests: ${label}`} onPress={() => setFilter(key)} />)}
+        accessibilityLabel={`Filter requests: ${label}`} accessibilityState={{ selected: filter === key }} onPress={() => setFilter(key)} />)}
     </View>
     {state.loading ? <LoadingSkeleton label="Loading your requests" /> : state.error ? <ErrorState title="Requests unavailable" message={state.error} onRetry={() => state.refresh()} />
       : requests.length ? <><AppText variant="caption" color="textSecondary">{requests.length} {requests.length === 1 ? 'request' : 'requests'} · latest first</AppText><RequestList requests={requests} navigation={navigation} /></>

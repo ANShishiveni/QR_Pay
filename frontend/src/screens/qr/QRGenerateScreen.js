@@ -30,7 +30,7 @@ export default function QRGenerateScreen({ navigation, route }) {
       checkedRequestResponse(data, data.paymentRequest?.id);
       navigation.replace('QRRequestDetails', { requestId: data.paymentRequest.id });
     } catch (error) {
-      if (accepted || error.isNetworkError || error.response?.status >= 500) {
+      if (accepted || (error.isNetworkError && !error.requestNotSent) || error.response?.status >= 500) {
         setUncertain(true);
         setFailure('The connection ended before we could confirm creation. Check your requests before creating another one.');
       } else setFailure(error.response?.data?.error || error.message || 'Your request could not be created. Try again.');

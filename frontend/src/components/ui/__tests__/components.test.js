@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { Modal, Platform, StyleSheet } from 'react-native';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { AppButton, AppText, AppTextField, ConfirmBottomSheet, EmptyState, ErrorState, LoadingSkeleton,
   MaskedCard, OfflineBanner, PaymentResult, ReceiptView, RequestCountdown } from '..';
@@ -8,6 +8,8 @@ import { lightColors } from '../../../styles/theme';
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+const originalPlatform = Platform.OS;
+afterEach(() => { Platform.OS = originalPlatform; });
 
 test('busy buttons announce their state and block duplicate interaction', () => {
   const onPress = jest.fn();
@@ -20,6 +22,23 @@ test('busy buttons announce their state and block duplicate interaction', () => 
   view.rerender(<AppButton title="Confirm simulation" onPress={onPress} />);
   fireEvent.press(view.getByRole('button', { name: 'Confirm simulation' }));
   expect(onPress).toHaveBeenCalledTimes(1);
+});
+
+test('native button state preserves disclosure and selection while enforcing the actual pending state', () => {
+  const view = render(<AppButton title="Date filters" loading accessibilityState={{ expanded: true, selected: true, disabled: false }} />);
+  expect(view.getByRole('button', { name: 'Date filters' }).props.accessibilityState).toEqual({ expanded: true, selected: true, disabled: true, busy: true });
+});
+
+test('field description IDs are unique and stay associated when validation replaces a hint', () => {
+  Platform.OS = 'web';
+  const view = render(<><AppTextField label="Amount" hint="Use Namibia dollars." /><AppTextField label="Reference" hint="Optional." /></>);
+  const id = view.getByLabelText('Amount').props['aria-describedby'];
+  expect(id).toBe(view.getByText('Use Namibia dollars.').props.nativeID);
+  expect(id).not.toBe(view.getByLabelText('Reference').props['aria-describedby']);
+  view.rerender(<><AppTextField label="Amount" error="Enter a positive amount." /><AppTextField label="Reference" hint="Optional." /></>);
+  expect(view.getByLabelText('Amount').props['aria-describedby']).toBe(id);
+  expect(view.getByLabelText('Amount').props['aria-invalid']).toBe(true);
+  expect(view.getByRole('alert').props.nativeID).toBe(id);
 });
 
 test('text resolves semantic tokens and fields expose their validation to assistive technology', () => {
@@ -108,4 +127,13 @@ test('confirmation sheets prevent dismissal while a mutation is in progress', ()
   fireEvent.press(view.getByRole('button', { name: 'Remove' }));
   expect(cancel).not.toHaveBeenCalled();
   expect(confirm).not.toHaveBeenCalled();
+});
+
+test('web confirmation labels the outer modal without creating a second dialog role', () => {
+  Platform.OS = 'web';
+  const view = render(<ConfirmBottomSheet visible title="Remove test instrument?" message="Past receipts remain available." onCancel={jest.fn()} onConfirm={jest.fn()} />);
+  const modal = view.UNSAFE_getByType(Modal);
+  expect(modal.props['aria-label']).toBe('Remove test instrument?');
+  expect(modal.props['aria-describedby']).toBe(view.getByText('Past receipts remain available.').props.nativeID);
+  expect(view.queryAllByRole('dialog')).toHaveLength(0); // The actual RN Web Modal supplies its own outer role.
 });

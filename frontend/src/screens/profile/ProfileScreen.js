@@ -4,9 +4,11 @@ import { AppButton, AppCard, AppHeader, AppScreen, AppText, ConfirmBottomSheet, 
 import { useAuth } from '../../context/AuthContext';
 import useProfile from '../../features/profile/useProfile';
 import ProfileAvatar from '../../features/profile/ProfileAvatar';
+import { useNotifications } from '../../context/NotificationContext';
 
 export default function ProfileScreen({ navigation }) {
   const { logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const { profile, loading, error, refresh } = useProfile(navigation);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -31,6 +33,7 @@ export default function ProfileScreen({ navigation }) {
         <AppButton title="My profile" icon="person-outline" variant="ghost" onPress={() => navigation.navigate('MyProfile')} />
         <AppButton title="Test instruments" icon="card-outline" variant="ghost" onPress={() => navigation.navigate('Cards')} />
         <AppButton title="Settings" icon="settings-outline" variant="ghost" onPress={() => navigation.navigate('Settings')} />
+        <AppButton title={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'} icon="notifications-outline" variant="ghost" onPress={() => navigation.navigate('Notifications')} />
         <AppButton title="Help and FAQ" icon="help-circle-outline" variant="ghost" onPress={() => navigation.navigate('Help')} />
         <AppButton title="About and privacy" icon="information-circle-outline" variant="ghost" onPress={() => navigation.navigate('About')} />
       </AppCard>

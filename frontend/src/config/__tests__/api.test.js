@@ -2,14 +2,30 @@ import { Platform } from 'react-native';
 import apiClient, { authAPI, otpAPI, qrAPI, userAPI } from '../api';
 import sessionStorage from '../../services/storage/sessionStorage';
 import { onSessionExpired } from '../../services/sessionEvents';
+import { getNetworkStatus, setNetworkStatus } from '../../services/networkStatus';
 
 jest.mock('../../services/storage/sessionStorage', () => ({
   __esModule: true, default: { getToken: jest.fn(), clearToken: jest.fn() },
 }));
 
 beforeEach(() => {
+  setNetworkStatus('unknown');
   sessionStorage.getToken.mockResolvedValue('test-only-bearer');
   sessionStorage.clearToken.mockResolvedValue(undefined);
+});
+
+test('known disconnection blocks a write before transport and read recovery never replays it', async () => {
+  const adapter = jest.fn(async config => ({ data: {}, status: 200, statusText: 'OK', headers: {}, config }));
+  apiClient.defaults.adapter = adapter;
+  setNetworkStatus('unreachable');
+  await expect(qrAPI.generateQR({ amountMinor: 100 })).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE', requestNotSent: true });
+  expect(adapter).not.toHaveBeenCalled();
+  await qrAPI.getRequests();
+  expect(getNetworkStatus()).toBe('reachable');
+  expect(adapter).toHaveBeenCalledTimes(1);
+  expect(adapter.mock.calls[0][0].method).toBe('get');
+  await qrAPI.generateQR({ amountMinor: 100 });
+  expect(adapter).toHaveBeenCalledTimes(2);
 });
 
 test('request-bound verification sends no client-supplied phone destination', async () => {

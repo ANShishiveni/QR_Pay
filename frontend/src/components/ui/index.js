@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo, ActivityIndicator, findNodeHandle, KeyboardAvoidingView, Modal,
   Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
@@ -7,10 +7,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../context/ThemeContext';
 import { formatDate, formatMoney } from '../../utils/money';
+import { accessibilityStateProps, describedByIds } from './accessibility';
 
-export const AppText = forwardRef(function AppText({ variant = 'body', color, style, children, ...props }, ref) {
+export const AppText = forwardRef(function AppText({ variant = 'body', color, style, children, headingLevel, ...props }, ref) {
   const { colors, typography } = useAppTheme();
-  return <Text ref={ref} {...props} style={[typography[variant] || typography.body, { color: colors[color] || color || colors.text }, style]}>{children}</Text>;
+  const isHeading = props.accessibilityRole === 'header' || props.role === 'heading';
+  const webHeading = Platform.OS === 'web' && isHeading
+    ? { 'aria-level': props['aria-level'] || headingLevel || (variant === 'h1' ? 1 : 2) } : {};
+  return <Text ref={ref} {...props} {...webHeading} style={[typography[variant] || typography.body, { color: colors[color] || color || colors.text }, style]}>{children}</Text>;
 });
 
 export function AppScreen({ children, scroll = true, padded = true, style, contentStyle, refreshControl, edges, ...props }) {
@@ -52,44 +56,51 @@ export function AppHeader({ title, subtitle, kicker, onBack, right, style }) {
   </View>;
 }
 
-export function IconButton({ name, label, onPress, disabled, color, style, ...props }) {
+export const IconButton = forwardRef(function IconButton({ name, label, onPress, disabled, color, style, accessibilityState, ...props }, ref) {
   const { colors } = useAppTheme();
-  return <Pressable {...props} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }}
+  return <Pressable ref={ref} {...props} accessibilityRole="button" accessibilityLabel={label} {...accessibilityStateProps({ ...accessibilityState, disabled: !!disabled })}
     disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.iconButton, { backgroundColor: pressed ? colors.primarySoft : 'transparent', opacity: disabled ? 0.5 : 1 }, style]}>
     <Ionicons name={name} size={23} color={color || colors.text} />
   </Pressable>;
-}
+});
 
-export function AppButton({ title, children, onPress, variant = 'primary', icon, loading = false, disabled = false, style, textStyle, ...props }) {
+export const AppButton = forwardRef(function AppButton({ title, children, onPress, variant = 'primary', icon, loading = false, disabled = false, style, textStyle, accessibilityState, ...props }, ref) {
   const { colors } = useAppTheme();
   const blocked = disabled || loading;
   const fills = { primary: colors.primary, secondary: colors.surface, ghost: 'transparent', danger: colors.error };
   const foreground = blocked ? colors.onDisabled : ['primary', 'danger'].includes(variant) ? (variant === 'primary' ? colors.onPrimary : colors.onError) : colors.primary;
-  return <Pressable {...props} onPress={onPress} disabled={blocked} accessibilityRole="button"
+  return <Pressable ref={ref} {...props} onPress={onPress} disabled={blocked} accessibilityRole="button"
     accessibilityLabel={props.accessibilityLabel || (typeof title === 'string' ? title : undefined)}
-    accessibilityState={{ disabled: blocked, busy: loading }}
+    {...accessibilityStateProps({ ...accessibilityState, disabled: blocked, busy: loading || !!accessibilityState?.busy })}
     style={({ pressed }) => [styles.button, { backgroundColor: blocked ? colors.disabled : fills[variant] || fills.primary,
       borderColor: variant === 'secondary' ? colors.border : 'transparent', opacity: pressed ? 0.82 : 1 }, style]}>
     {loading ? <ActivityIndicator color={foreground} size="small" /> : icon ? <Ionicons name={icon} color={foreground} size={20} /> : null}
     <AppText variant="button" color={foreground} style={[styles.buttonText, textStyle]}>{title || children}</AppText>
   </Pressable>;
-}
+});
 
 export const AppTextField = forwardRef(function AppTextField({ label, error, hint, style, inputStyle, trailing, leading, onFocus, onBlur, ...props }, ref) {
   const { colors } = useAppTheme();
   const [focused, setFocused] = useState(false);
+  const generatedId = useId();
+  const fieldId = props.id || props.nativeID || `field-${generatedId}`;
+  const descriptionId = `${fieldId}-description`;
+  const webDescription = Platform.OS === 'web' ? {
+    'aria-invalid': error ? true : (props['aria-invalid'] ?? false),
+    'aria-describedby': describedByIds(props['aria-describedby'], (error || hint) && descriptionId),
+  } : {};
   return <View style={[styles.field, style]}>
     <AppText variant="label" style={styles.fieldLabel}>{label}</AppText>
     <View style={[styles.inputFrame, { backgroundColor: colors.surface, borderColor: error ? colors.error : focused ? colors.primary : colors.controlBorder, borderWidth: focused || error ? 2 : 1 }]}>
       {leading}
-      <TextInput ref={ref} {...props} accessibilityLabel={props.accessibilityLabel || label} accessibilityHint={error || hint || props.accessibilityHint}
+      <TextInput ref={ref} {...props} nativeID={fieldId} {...webDescription} accessibilityLabel={props.accessibilityLabel || label} accessibilityHint={error || hint || props.accessibilityHint}
         placeholderTextColor={colors.textSecondary} selectionColor={colors.primary}
         onFocus={event => { setFocused(true); onFocus?.(event); }} onBlur={event => { setFocused(false); onBlur?.(event); }}
         style={[styles.input, { color: colors.text }, Platform.OS === 'web' && { outlineStyle: 'none' }, inputStyle]} />
       {trailing}
     </View>
-    {error ? <AppText variant="caption" color={colors.error} accessibilityRole="alert" style={styles.fieldHint}>{error}</AppText>
-      : hint ? <AppText variant="caption" color={colors.textSecondary} style={styles.fieldHint}>{hint}</AppText> : null}
+    {error ? <AppText nativeID={descriptionId} variant="caption" color={colors.error} accessibilityRole="alert" style={styles.fieldHint}>{error}</AppText>
+      : hint ? <AppText nativeID={descriptionId} variant="caption" color={colors.textSecondary} style={styles.fieldHint}>{hint}</AppText> : null}
   </View>;
 });
 
@@ -106,10 +117,11 @@ export function FormError({ message, children, style }) {
   </View>;
 }
 
-export function AppCard({ children, style, onPress, accessibilityLabel, ...props }) {
+export function AppCard({ children, style, onPress, accessibilityLabel, accessibilityState, ...props }) {
   const { colors } = useAppTheme();
   const cardStyle = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, style];
   return onPress ? <Pressable {...props} onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}
+    {...accessibilityStateProps(accessibilityState)}
     style={({ pressed }) => [cardStyle, { opacity: pressed ? 0.84 : 1 }]}>{children}</Pressable>
     : <View {...props} style={cardStyle}>{children}</View>;
 }
@@ -142,6 +154,7 @@ export function MaskedCard({ card = {}, selected, onPress, style }) {
   const { colors } = useAppTheme();
   const last4 = String(card.last4 || '••••').slice(-4);
   return <AppCard onPress={onPress} accessibilityLabel={`${card.brand || 'Demo'} test instrument ending ${last4}${card.isDefault ? ', default' : ''}`}
+    accessibilityState={typeof selected === 'boolean' ? { selected } : undefined}
     style={[styles.maskedCard, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySoft : colors.surface }, style]}>
     <View style={styles.rowBetween}><Ionicons name="card-outline" size={26} color={colors.primary} /><AppText variant="caption" color={colors.textSecondary}>TEST INSTRUMENT</AppText></View>
     <AppText variant="h3" style={{ marginTop: 18, letterSpacing: 2 }}>••••  ••••  ••••  {last4}</AppText>
@@ -176,7 +189,7 @@ export function ErrorState({ title = 'We couldn’t load this', message = 'Check
 
 export function LoadingSkeleton({ lines = 3, label = 'Loading', style }) {
   const { colors } = useAppTheme();
-  return <View accessible accessibilityRole="progressbar" accessibilityLabel={label} accessibilityState={{ busy: true }} style={[styles.skeleton, style]}>
+  return <View accessible accessibilityRole="progressbar" accessibilityLabel={label} {...accessibilityStateProps({ busy: true }, 'progressbar')} style={[styles.skeleton, style]}>
     {Array.from({ length: lines }, (_, i) => <View key={i} style={{ height: i === 0 ? 24 : 14, borderRadius: 6, backgroundColor: colors.disabled, width: i === lines - 1 ? '62%' : '100%' }} />)}
   </View>;
 }
@@ -213,6 +226,7 @@ export function ConfirmBottomSheet({ visible, title, message, children, confirmL
   const { colors, reduceMotion } = useAppTheme();
   const insets = useSafeAreaInsets();
   const titleRef = useRef(null);
+  const messageId = `confirmation-${useId()}-description`;
   const wasVisible = useRef(visible);
   useEffect(() => {
     if (wasVisible.current && !visible) {
@@ -226,13 +240,14 @@ export function ConfirmBottomSheet({ visible, title, message, children, confirmL
     else { const tag = findNodeHandle(titleRef.current); if (tag) AccessibilityInfo.setAccessibilityFocus(tag); }
   };
   const close = () => { if (!loading) onCancel?.(); };
-  return <Modal visible={!!visible} transparent animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={close} onShow={focusTitle}>
+  return <Modal visible={!!visible} transparent animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={close} onShow={focusTitle}
+    {...(Platform.OS === 'web' ? { 'aria-label': title, 'aria-describedby': message ? messageId : undefined } : {})}>
     <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
-      <ScrollView accessibilityViewIsModal role="dialog" accessibilityLabel={title} keyboardShouldPersistTaps="handled"
+      <ScrollView accessibilityViewIsModal {...(Platform.OS === 'web' ? {} : { role: 'dialog', accessibilityLabel: title })} keyboardShouldPersistTaps="handled"
         style={[styles.sheetFrame, { backgroundColor: colors.surface }]} contentContainerStyle={[styles.sheet, { paddingBottom: Math.max(24, insets.bottom + 16) }]}>
         <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
         <AppText ref={titleRef} variant="h2" accessibilityRole="header" tabIndex={-1}>{title}</AppText>
-        {message ? <AppText color={colors.textSecondary}>{message}</AppText> : null}{children}
+        {message ? <AppText nativeID={messageId} color={colors.textSecondary}>{message}</AppText> : null}{children}
         <AppButton title={confirmLabel} loading={loading} variant={destructive ? 'danger' : 'primary'} onPress={onConfirm} />
         <AppButton title="Cancel" variant="ghost" onPress={close} disabled={loading} />
       </ScrollView>

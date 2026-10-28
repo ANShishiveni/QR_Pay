@@ -126,6 +126,44 @@ test('backgrounding clears entered OTP; foreground status check recovers the cur
   expect(otpAPI.sendOTP).toHaveBeenCalledTimes(1); expect(qrAPI.confirmPayment).not.toHaveBeenCalled();
   view.unmount(); spy.mockRestore();
 });
+test('an unfocused OTP screen skips foreground reads and reconciles read-only when focused again', async () => {
+  const changes = [];
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((name, fn) => { changes.push(fn); return { remove: jest.fn() }; });
+  const view = render(<OTPVerificationScreen route={otpRoute} navigation={navigation} />);
+  await waitFor(() => expect(view.getByRole('button', { name: 'Send verification code' })).toBeEnabled());
+  press(view, 'Send verification code');
+  await waitFor(() => expect(view.getByLabelText('Payment verification code')).toBeTruthy());
+  fireEvent.changeText(view.getByLabelText('Payment verification code'), '123456');
+  const reads = qrAPI.getRequest.mock.calls.length;
+  act(() => listeners.blur());
+  expect(view.getByLabelText('Payment verification code').props.value).toBe('');
+  await act(async () => changes.forEach(fn => fn('active')));
+  expect(qrAPI.getRequest).toHaveBeenCalledTimes(reads);
+  await act(async () => listeners.focus());
+  await waitFor(() => expect(view.getByRole('button', { name: 'Check payment status' })).toBeTruthy());
+  expect(qrAPI.getRequest).toHaveBeenCalledTimes(reads + 1);
+  expect(otpAPI.sendOTP).toHaveBeenCalledTimes(1);
+  expect(otpAPI.verifyOTP).not.toHaveBeenCalled();
+  expect(qrAPI.confirmPayment).not.toHaveBeenCalled();
+});
+test('a completed in-flight confirmation defers result navigation until OTP is focused again', async () => {
+  let resolveConfirmation;
+  qrAPI.confirmPayment.mockImplementationOnce(() => new Promise(resolve => { resolveConfirmation = resolve; }));
+  const view = render(<OTPVerificationScreen route={otpRoute} navigation={navigation} />);
+  await waitFor(() => expect(view.getByRole('button', { name: 'Send verification code' })).toBeEnabled());
+  press(view, 'Send verification code');
+  await waitFor(() => expect(view.getByLabelText('Payment verification code')).toBeTruthy());
+  fireEvent.changeText(view.getByLabelText('Payment verification code'), '123456');
+  press(view, 'Verify and confirm payment');
+  await waitFor(() => expect(qrAPI.confirmPayment).toHaveBeenCalledTimes(1));
+  act(() => listeners.blur());
+  await act(async () => resolveConfirmation({ data: { transaction } }));
+  expect(navigation.replace).not.toHaveBeenCalled();
+  act(() => listeners.focus());
+  expect(navigation.replace).toHaveBeenCalledWith('PaymentResult', { requestId: request.id, transactionId: transaction.id });
+  expect(qrAPI.confirmPayment).toHaveBeenCalledTimes(1);
+  expect(otpAPI.verifyOTP).toHaveBeenCalledTimes(1);
+});
 test('result ignores forged route success and reveals only an authorized server receipt', async () => {
   qrAPI.getRequest.mockResolvedValue(response({ ...request, status: 'completed' }, transaction));
   const view = render(<PaymentResultScreen route={{ params: { requestId: request.id, transactionId: transaction.id, amountMinor: 1, status: 'failed' } }} navigation={navigation} />);

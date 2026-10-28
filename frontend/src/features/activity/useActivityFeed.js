@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { userAPI } from '../../config/api';
+import { getNetworkStatus, subscribeNetworkStatus } from '../../services/networkStatus';
 import { activityQuery, checkedActivityPage, mergeActivity } from './activityModel';
 
 const LIMIT = 20;
@@ -40,10 +41,18 @@ export default function useActivityFeed(uid, filters, navigation) {
     mounted.current = true;
     load(true, true);
     let focused = navigation?.isFocused?.() !== false;
+    let foreground = AppState.currentState !== 'background' && AppState.currentState !== 'inactive';
     const focus = navigation?.addListener?.('focus', () => { focused = true; load(true); });
     const blur = navigation?.addListener?.('blur', () => { focused = false; });
-    const app = AppState.addEventListener('change', value => { if (value === 'active' && focused) load(true); });
-    return () => { mounted.current = false; generation.current += 1; inFlight.current = null; focus?.(); blur?.(); app.remove(); };
+    const app = AppState.addEventListener('change', value => { foreground = value === 'active'; if (foreground && focused) load(true); });
+    let network = getNetworkStatus();
+    const unsubscribe = subscribeNetworkStatus(() => {
+      const next = getNetworkStatus();
+      const reconnected = network === 'unreachable' && next === 'reachable';
+      network = next;
+      if (reconnected && focused && foreground) load(true);
+    });
+    return () => { mounted.current = false; generation.current += 1; inFlight.current = null; focus?.(); blur?.(); app.remove(); unsubscribe(); };
   }, [load, navigation]);
   // A changed account/filter never renders the preceding response even for one
   // render while its effect starts. Late page and refresh responses are ignored.

@@ -49,9 +49,14 @@ test('activity reads the authenticated server page and opens details with only t
 test('direction, status, search and full Namibia calendar dates are sent to the server', async () => {
   const view = render(<TransactionsScreen navigation={navigation} />);
   await waitFor(() => expect(view.getByText('Demo Recipient')).toBeTruthy());
+  expect(view.getByRole('button', { name: 'All activity' }).props.accessibilityState.selected).toBe(true);
+  expect(view.getByRole('button', { name: 'Date and status filters' }).props.accessibilityState.expanded).toBe(false);
   press(view, 'Sent');
   await waitFor(() => expect(userAPI.getTransactions).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'sent', offset: 0 })));
+  expect(view.getByRole('button', { name: 'Sent' }).props.accessibilityState.selected).toBe(true);
+  expect(view.getByRole('button', { name: 'All activity' }).props.accessibilityState.selected).toBe(false);
   press(view, 'Date and status filters'); press(view, 'Status: completed');
+  expect(view.getByRole('button', { name: 'Hide date and status filters' }).props.accessibilityState.expanded).toBe(true);
   fill(view, 'Search activity', ' Lunch '); fill(view, 'From date', '2026-10-27'); fill(view, 'To date', '2026-10-27');
   press(view, 'Apply search and dates');
   await waitFor(() => expect(userAPI.getTransactions).toHaveBeenLastCalledWith({ type: 'sent', status: 'completed', search: 'Lunch',

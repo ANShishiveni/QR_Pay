@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
+import { getNetworkStatus, subscribeNetworkStatus } from '../../services/networkStatus';
 
 // Poll only while this screen is focused and the app is in the foreground.
 // Sequence numbers keep a slow read from overwriting a later mutation response.
@@ -48,10 +49,17 @@ export default function useFocusedResource(load, navigation, intervalMs = 15000)
       foreground = state === 'active';
       if (foreground && focused) refresh();
     });
+    let network = getNetworkStatus();
+    const unsubscribe = subscribeNetworkStatus(() => {
+      const next = getNetworkStatus();
+      const reconnected = network === 'unreachable' && next === 'reachable';
+      network = next;
+      if (reconnected && focused && foreground) refresh(true);
+    });
     const timer = setInterval(() => { if (focused && foreground) refresh(); }, intervalMs);
     return () => {
       mounted.current = false; sequence.current += 1; inFlight.current = null;
-      clearInterval(timer); focus?.(); blur?.(); lifecycle.remove();
+      clearInterval(timer); focus?.(); blur?.(); lifecycle.remove(); unsubscribe();
     };
   }, [navigation, refresh, intervalMs]);
   return { data, loading, refreshing, error, refresh, replace };

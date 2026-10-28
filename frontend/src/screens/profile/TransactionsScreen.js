@@ -6,10 +6,11 @@ import { AppScreen, AppHeader, AppText, AppButton, AppTextField, DemoModeBadge, 
   LoadingSkeleton, EmptyState, ErrorState, FormError } from '../../components/ui';
 import { activityQuery, DEFAULT_ACTIVITY_FILTERS } from '../../features/activity/activityModel';
 import useActivityFeed from '../../features/activity/useActivityFeed';
+import { accessibilityStateProps } from '../../components/ui/accessibility';
 
 function FilterChip({ title, label = title, selected, onPress }) {
   const { colors } = useAppTheme();
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} onPress={onPress}
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} {...accessibilityStateProps({ selected })} onPress={onPress}
     style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22,
       backgroundColor: selected ? colors.primary : colors.surface, borderWidth: 1, borderColor: selected ? colors.primary : colors.border, opacity: pressed ? 0.75 : 1 })}>
     <AppText variant="label" color={selected ? colors.onPrimary : colors.textSecondary}>{title}</AppText>
@@ -39,6 +40,7 @@ export default function TransactionsScreen({ navigation }) {
     <AppTextField label="Search activity" value={draft.search} onChangeText={search => setDraft(previous => ({ ...previous, search }))}
       placeholder="Name, reference or transaction ID" maxLength={120} returnKeyType="search" onSubmitEditing={apply} />
     <AppButton title={expanded ? 'Hide date and status filters' : 'Date and status filters'} variant="ghost" onPress={() => setExpanded(value => !value)}
+      accessibilityState={{ expanded }}
       accessibilityHint={expanded ? 'Date and status filters are expanded.' : 'Expand date and status filters.'} />
     {expanded ? <View style={{ gap: 14 }}>
       <AppText variant="label">Payment status</AppText>

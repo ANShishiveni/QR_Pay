@@ -4,7 +4,7 @@ Branch: `feat/nampay-2` · Baseline: `998d2ec571289edbf777a52d9edea50652cf257b`
 
 Machine-readable source: [progress.json](progress.json). Tasks become Done only after their evidence and acceptance criteria are verified.
 
-Updated: 2026-10-28T15:39:41.100636+00:00
+Updated: 2026-10-28T22:45:33.020670+00:00
 
 ## Phase 0 — Baseline and isolated development
 
@@ -61,33 +61,33 @@ Status: **Browser/component gate passed; native share/photo/biometric checks pen
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P4-01 | Done | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | Working tree | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
-| P4-02 | Done | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | Working tree | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
-| P4-03 | Needs verification | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | Working tree | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
-| P4-04 | Needs verification | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | Working tree | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
+| P4-01 | Done | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | 442968ca | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
+| P4-02 | Done | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | 442968ca | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
+| P4-03 | Needs verification | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | 442968ca | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
+| P4-04 | Needs verification | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | 442968ca | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
 
 ## Phase 5 — Reliability, accessibility and notifications
+
+Status: **Automated/browser gates passed; native accessibility and hardware acceptance pending**
+
+| Task | Status | Evidence | Commit / PR | Next action |
+| --- | --- | --- | --- | --- |
+| P5-01 | Done | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | Working tree | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
+| P5-02 | Done | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | Working tree | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
+| P5-03 | Needs verification | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | Working tree | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
+| P5-04 | Done | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | Working tree | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
+
+## Phase 6 — QA, CI and release documentation
 
 Status: **In progress**
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P5-01 | In progress | Not verified | Working tree | Implement offline recovery, in-app inbox and accessibility fixes |
-| P5-02 | In progress | Not verified | Working tree | Implement offline recovery, in-app inbox and accessibility fixes |
-| P5-03 | In progress | Not verified | Working tree | Implement offline recovery, in-app inbox and accessibility fixes |
-| P5-04 | In progress | Not verified | Working tree | Implement offline recovery, in-app inbox and accessibility fixes |
-
-## Phase 6 — QA, CI and release documentation
-
-Status: **Not started**
-
-| Task | Status | Evidence | Commit / PR | Next action |
-| --- | --- | --- | --- | --- |
-| P6-01 | Not started | Not verified | Working tree | Await previous phase gate |
-| P6-02 | Not started | Not verified | Working tree | Await previous phase gate |
-| P6-03 | Not started | Not verified | Working tree | Await previous phase gate |
-| P6-04 | Not started | Not verified | Working tree | Await previous phase gate |
-| P6-05 | Not started | Not verified | Working tree | Await previous phase gate |
+| P6-01 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
+| P6-02 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
+| P6-03 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
+| P6-04 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
+| P6-05 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
 
 ## Current limitations
 

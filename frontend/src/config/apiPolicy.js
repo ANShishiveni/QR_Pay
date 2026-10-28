@@ -22,12 +22,13 @@ function safeApiError(error) {
   const status = error.response?.status;
   const body = error.response?.data;
   const failure = new Error(
-    typeof body?.error === 'string'
+    !status && error.requestNotSent === true ? 'Reconnect before making changes. Your request has not been sent.' : typeof body?.error === 'string'
       ? body.error
       : status ? 'The request could not be completed.' : 'Unable to reach NamPay. Check your connection and try again.'
   );
   failure.code = typeof body?.code === 'string' ? body.code : status ? 'REQUEST_FAILED' : 'NETWORK_UNAVAILABLE';
   failure.isNetworkError = !status;
+  if (!status && error.requestNotSent === true) failure.requestNotSent = true;
   // Never forward Axios config/request objects containing credentials/form data.
   if (status) {
     const data = { error: failure.message, code: failure.code };

@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import sessionStorage from '../services/storage/sessionStorage';
 import { notifySessionExpired } from '../services/sessionEvents';
 import { resolveApiHost, safeApiError } from './apiPolicy';
+import { isKnownOffline, setNetworkStatus } from '../services/networkStatus';
 
 const isWeb = Platform.OS === 'web';
 const development = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
@@ -21,6 +22,12 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(async (config) => {
+  if (isKnownOffline() && !['get', 'head', 'options'].includes(String(config.method || 'get').toLowerCase())) {
+    const error = new Error('Reconnect before making changes. Your request has not been sent.');
+    error.code = 'NETWORK_UNAVAILABLE';
+    error.requestNotSent = true;
+    throw error;
+  }
   if (!isWeb) {
     const token = await sessionStorage.getToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -29,7 +36,8 @@ apiClient.interceptors.request.use(async (config) => {
 });
 
 const publicAuthPaths = new Set(['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']);
-apiClient.interceptors.response.use(response => response, async error => {
+apiClient.interceptors.response.use(response => { setNetworkStatus('reachable'); return response; }, async error => {
+  setNetworkStatus(error.response ? 'reachable' : 'unreachable');
   const rejectedPasswordProof = error.config?.url === '/users/password' && error.response?.data?.code === 'REAUTHENTICATION_FAILED';
   if (error.response?.status === 401 && !publicAuthPaths.has(error.config?.url) && !rejectedPasswordProof) {
     // The startup verifier owns its result. A new browser without a cookie is
@@ -57,6 +65,8 @@ export const userAPI = {
   updateProfile: data => apiClient.put('/users/profile', data),
   getTransactions: params => apiClient.get('/users/transactions', { params }),
   getStats: () => apiClient.get('/users/stats'),
+  getNotifications: () => apiClient.get('/users/notifications'),
+  markNotificationRead: id => apiClient.put(`/users/notifications/${segment(id)}/read`),
   updatePreferences: data => apiClient.put('/users/preferences', data),
   uploadPhoto: data => apiClient.post('/users/photo', data),
   changePassword: async data => {

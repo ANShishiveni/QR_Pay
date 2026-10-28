@@ -265,8 +265,10 @@ The DTO intentionally excludes counterpart email/phone, raw PAN, CVV and stored 
 ### In-app notifications
 
 - `GET /users/notifications` returns `{notifications:[{id,recipientUid,eventType,requestId?,createdAt,readAt,simulated?}]}` for the current UID, newest first, capped at 100 records.
+- Before returning the inbox, the server atomically expires due owned requests and creates deduplicated expiry events. Opening the QR list first is unnecessary. Other users' requests are not changed by this reconciliation.
 - `PUT /users/notifications/:id/read` returns `{message:"Notification marked as read"}`. The first read timestamp is retained on retries; an unknown or another user's record returns 404.
 - Notifications describe server events. They are not payment authorization or authoritative settlement proof. No push-notification delivery service is implied by these routes.
+- The `notifications` preference controls in-app badges; it does not delete or hide the owned inbox or transaction history. Opening an event loads the authoritative request/transaction again.
 
 ### Authentication/data compatibility and intentional changes
 

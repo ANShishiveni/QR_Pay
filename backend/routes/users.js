@@ -145,7 +145,10 @@ router.get('/stats', asyncRoute(async (req, res) => {
 }));
 
 router.get('/notifications', asyncRoute(async (req, res) => {
-  const state = (await req.app.locals.repository.read()) || {};
+  const { expireRequests } = require('../services/paymentState');
+  const { repository, config } = req.app.locals;
+  const now = auth.nowMs(config);
+  const { snapshot: state } = await repository.transaction(root => expireRequests(root, req.user.uid, now));
   const notifications = Object.entries(state.notifications?.[req.user.uid] || {}).map(([id, item]) => ({ ...item, id }));
   notifications.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   res.json({ notifications: notifications.slice(0, 100) });

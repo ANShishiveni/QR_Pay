@@ -17,20 +17,36 @@ export default function OTPVerificationScreen({ route, navigation }) {
   const [clock, setClock] = useState(Date.now());
   const controller = useRef(null);
   useEffect(() => {
-    const instance = createPaymentFlow({ api: { otpAPI, paymentAPI, qrAPI }, requestId, cardId, uid: user?.uid,
-      idempotencyKey: key.current, onChange: setFlow,
-      onComplete: transaction => { setCode(''); navigation.replace('PaymentResult', { requestId, transactionId: transaction.id || transaction.transactionId }); } });
-    controller.current = instance;
-    instance.initialize();
-    const active = AppState.addEventListener('change', state => {
+    let focused = navigation.isFocused?.() !== false;
+    let foreground = AppState.currentState !== 'background' && AppState.currentState !== 'inactive';
+    let pendingResult = null;
+    const showResult = transaction => {
+      if (!focused || !foreground) { pendingResult = transaction; return; }
+      pendingResult = null;
       setCode('');
-      if (state === 'active') instance.resume();
+      navigation.replace('PaymentResult', { requestId, transactionId: transaction.id || transaction.transactionId });
+    };
+    const instance = createPaymentFlow({ api: { otpAPI, paymentAPI, qrAPI }, requestId, cardId, uid: user?.uid,
+      idempotencyKey: key.current, onChange: setFlow, onComplete: showResult });
+    controller.current = instance;
+    if (focused && foreground) instance.initialize();
+    const resume = () => {
+      if (!focused || !foreground) return;
+      if (pendingResult) showResult(pendingResult);
+      else instance.resume(); // Reads current status; never retries a confirmation.
+    };
+    const focus = navigation.addListener?.('focus', () => { focused = true; resume(); });
+    const blur = navigation.addListener?.('blur', () => { focused = false; setCode(''); });
+    const active = AppState.addEventListener('change', state => {
+      foreground = state === 'active';
+      setCode('');
+      resume();
     });
     const leave = navigation.addListener?.('beforeRemove', event => {
       if (['verifying', 'confirming', 'uncertain', 'verification_unknown'].includes(instance.getState().phase)) event.preventDefault();
     });
     const timer = setInterval(() => setClock(Date.now()), 1000);
-    return () => { instance.dispose(); active.remove(); leave?.(); clearInterval(timer); };
+    return () => { instance.dispose(); active.remove(); focus?.(); blur?.(); leave?.(); clearInterval(timer); };
   }, [requestId, cardId, user?.uid, navigation]);
   const serverNow = clock + (flow.offset || 0);
   const resendSeconds = Math.max(0, Math.ceil(((flow.resendAt || 0) - serverNow) / 1000));

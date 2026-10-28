@@ -14,6 +14,7 @@ import biometricService from '../../../services/biometricService';
 
 jest.mock('../../../config/api', () => ({ userAPI: { updateProfile: jest.fn(), uploadPhoto: jest.fn(), updatePreferences: jest.fn(), changePassword: jest.fn() } }));
 jest.mock('../../../context/AuthContext', () => ({ useAuth: jest.fn() }));
+jest.mock('../../../context/NotificationContext', () => ({ useNotifications: () => ({ unreadCount: 0 }) }));
 jest.mock('../../../context/ThemeContext', () => ({ useAppTheme: jest.fn() }));
 jest.mock('../../../features/profile/useProfile', () => jest.fn());
 jest.mock('../../../services/biometricService', () => ({ __esModule: true, default: { checkAvailability: jest.fn(), authenticate: jest.fn(), enableBiometric: jest.fn(), disableBiometric: jest.fn() } }));
