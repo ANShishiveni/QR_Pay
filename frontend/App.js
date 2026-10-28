@@ -29,6 +29,10 @@ import MyProfileScreen from './src/screens/profile/MyProfileScreen';
 import CardsScreen from './src/screens/profile/CardsScreen';
 import TransactionsScreen from './src/screens/profile/TransactionsScreen';
 import SettingsScreen from './src/screens/profile/SettingsScreen';
+import TransactionDetailScreen from './src/screens/profile/TransactionDetailScreen';
+import ChangePasswordScreen from './src/screens/profile/ChangePasswordScreen';
+import HelpScreen from './src/screens/profile/HelpScreen';
+import AboutScreen from './src/screens/profile/AboutScreen';
 import PaymentConfirmScreen from './src/screens/payment/PaymentConfirmScreen';
 import PaymentsScreen from './src/screens/payment/PaymentsScreen';
 import PaymentResultScreen from './src/screens/payment/PaymentResultScreen';
@@ -106,7 +110,11 @@ export function AppContent() {
         <Stack.Screen name="Cards" component={CardsScreen} />
         <Stack.Screen name="MyProfile" component={MyProfileScreen} />
         <Stack.Screen name="Transactions" component={TransactionsScreen} />
+        <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <Stack.Screen name="Help" component={HelpScreen} />
+        <Stack.Screen name="About" component={AboutScreen} />
         <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
         <Stack.Screen name="BiometricAuth" component={BiometricAuthScreen} />
       </Stack.Group> : <Stack.Group navigationKey="guest">

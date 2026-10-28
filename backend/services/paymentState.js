@@ -90,7 +90,13 @@ function publicTransaction(transaction, uid) {
 function getUserTransactions(root, uid) {
   const result = new Map();
   for (const [key, transaction] of Object.entries(root.transactions || {})) {
-    if (!transaction || (transaction.payerUid !== uid && transaction.requesterUid !== uid && transaction.userId !== uid)) continue;
+    if (!transaction) continue;
+    const canonical = Boolean(transaction.payerUid && transaction.requesterUid);
+    // Canonical participants override any owner retained from the legacy schema.
+    const owned = canonical
+      ? transaction.payerUid === uid || transaction.requesterUid === uid
+      : transaction.userId === uid;
+    if (!owned) continue;
     try {
       const normalized = publicTransaction({ ...transaction, id: transaction.id || key }, uid);
       if (!result.has(normalized.id) || !normalized.legacy) result.set(normalized.id, normalized);

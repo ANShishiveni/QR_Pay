@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Share } from 'react-native';
+import { AppState } from 'react-native';
 import { paymentAPI, qrAPI } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 import { AppScreen, AppHeader, AppButton, AppText, PaymentResult, ReceiptView, FormError, LoadingSkeleton } from '../../components/ui';
 import { confirmedTransaction, paymentError, validateRequest } from '../../features/payments/paymentFlow';
-import { formatDate, formatMoney } from '../../utils/money';
+import { shareReceipt } from '../../services/receipts/shareReceipt';
 
 export default function PaymentResultScreen({ route, navigation }) {
   const { user } = useAuth();
@@ -51,15 +51,10 @@ export default function PaymentResultScreen({ route, navigation }) {
     const focus = navigation.addListener?.('focus', refresh);
     return () => { mounted.current = false; listener.remove(); focus?.(); };
   }, [refresh, navigation]);
-  const shareReceipt = async () => {
+  const handleShareReceipt = async () => {
     if (!record) return;
     try {
-      await Share.share({ title: 'NamPay simulated receipt', message: [
-        'NAMPAY — SIMULATED RECEIPT', 'No real funds transferred. Not proof of bank settlement.',
-        `Amount: ${formatMoney(record.amountMinor)}`, `From: ${record.payerName}`, `To: ${record.requesterName}`,
-        `Reference: ${record.reference || 'No reference'}`, `Method: ${record.methodLabel || 'Demo test instrument'}`,
-        `Transaction: ${record.id || record.transactionId}`, `Date: ${formatDate(record.completedAt || record.timestamp)}`,
-      ].join('\n') });
+      await shareReceipt(record);
     } catch { setError('The receipt could not be shared. You can still view it here.'); }
   };
   return <AppScreen contentStyle={{ maxWidth: 640, gap: 20 }}>
@@ -70,7 +65,7 @@ export default function PaymentResultScreen({ route, navigation }) {
     <FormError message={error} />
     {status !== 'completed' || error ? <AppButton title="Check payment status" onPress={refresh} loading={loading} variant="secondary" /> : null}
     {status !== 'completed' && request ? <AppText color="textSecondary">Latest request status: {request.status}</AppText> : null}
-    {record && receiptVisible ? <ReceiptView transaction={record} onShare={shareReceipt} /> : null}
+    {record && receiptVisible ? <ReceiptView transaction={record} onShare={handleShareReceipt} /> : null}
     <AppButton title="Back to home" onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })} variant="ghost" />
   </AppScreen>;
 }

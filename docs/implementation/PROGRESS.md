@@ -4,7 +4,7 @@ Branch: `feat/nampay-2` · Baseline: `998d2ec571289edbf777a52d9edea50652cf257b`
 
 Machine-readable source: [progress.json](progress.json). Tasks become Done only after their evidence and acceptance criteria are verified.
 
-Updated: 2026-10-27T07:36:09.007418+00:00
+Updated: 2026-10-28T15:39:41.100636+00:00
 
 ## Phase 0 — Baseline and isolated development
 
@@ -49,33 +49,33 @@ Status: **Browser/component gate passed; native cross-device checks pending**
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P3-01 | Needs verification | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
-| P3-02 | Done | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
-| P3-03 | Needs verification | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
-| P3-04 | Done | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
-| P3-05 | Done | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | Working tree | Retain regression coverage; native camera/share/device checks pending |
+| P3-01 | Needs verification | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | a414e3ab | Retain regression coverage; native camera/share/device checks pending |
+| P3-02 | Done | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | a414e3ab | Retain regression coverage; native camera/share/device checks pending |
+| P3-03 | Needs verification | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | a414e3ab | Retain regression coverage; native camera/share/device checks pending |
+| P3-04 | Done | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | a414e3ab | Retain regression coverage; native camera/share/device checks pending |
+| P3-05 | Done | 181 frontend tests across 17 suites; TypeScript passed; Two browser accounts: QR creation/image import, review, private OTP, lost confirm response, uncertain-state reconciliation, one canonical transaction and both histories/receipts; Request/scanner/payment screenshots saved; backend88 tests and real Firebase gates pass | a414e3ab | Retain regression coverage; native camera/share/device checks pending |
 
 ## Phase 4 — Dashboard, cards, activity and receipts
+
+Status: **Browser/component gate passed; native share/photo/biometric checks pending**
+
+| Task | Status | Evidence | Commit / PR | Next action |
+| --- | --- | --- | --- | --- |
+| P4-01 | Done | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | Working tree | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
+| P4-02 | Done | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | Working tree | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
+| P4-03 | Needs verification | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | Working tree | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
+| P4-04 | Needs verification | 287 frontend tests across27 suites; TypeScript passed; 90 backend tests across5 suites; canonical mixed-record ownership and wrong-issuer regressions passed; Chromium feature gate: cards/default/removal, server totals, filters, receipt download, profile/photo consent, theme keyboard/persistence, password proof/revocation; docs/testing/FEATURES.md | Working tree | Native share/photo/biometric acceptance remains unavailable; retain automated coverage |
+
+## Phase 5 — Reliability, accessibility and notifications
 
 Status: **In progress**
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P4-01 | In progress | Not verified | Working tree | Implement and verify main feature screens and account settings |
-| P4-02 | In progress | Not verified | Working tree | Implement and verify main feature screens and account settings |
-| P4-03 | In progress | Not verified | Working tree | Implement and verify main feature screens and account settings |
-| P4-04 | In progress | Not verified | Working tree | Implement and verify main feature screens and account settings |
-
-## Phase 5 — Reliability, accessibility and notifications
-
-Status: **Not started**
-
-| Task | Status | Evidence | Commit / PR | Next action |
-| --- | --- | --- | --- | --- |
-| P5-01 | Not started | Not verified | Working tree | Await previous phase gate |
-| P5-02 | Not started | Not verified | Working tree | Await previous phase gate |
-| P5-03 | Not started | Not verified | Working tree | Await previous phase gate |
-| P5-04 | Not started | Not verified | Working tree | Await previous phase gate |
+| P5-01 | In progress | Not verified | Working tree | Implement offline recovery, in-app inbox and accessibility fixes |
+| P5-02 | In progress | Not verified | Working tree | Implement offline recovery, in-app inbox and accessibility fixes |
+| P5-03 | In progress | Not verified | Working tree | Implement offline recovery, in-app inbox and accessibility fixes |
+| P5-04 | In progress | Not verified | Working tree | Implement offline recovery, in-app inbox and accessibility fixes |
 
 ## Phase 6 — QA, CI and release documentation
 

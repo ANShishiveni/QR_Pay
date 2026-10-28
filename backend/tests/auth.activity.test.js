@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const { testContext } = require('./helpers/app');
 const { issueSession } = require('../services/authService');
 
-function seeded() {
+function seeded({ routes = ['auth', 'users'] } = {}) {
   const alice = { uid: 'alice', email: 'alice@example.test', firstName: 'Alice', lastName: 'Tester', status: 'active', sessionVersion: 0 };
   const bob = { uid: 'bob', email: 'bob@example.test', firstName: 'Bob', lastName: 'Tester', status: 'active', sessionVersion: 0 };
   const outsider = { uid: 'outsider', email: 'outsider@example.test', status: 'active', sessionVersion: 0 };
@@ -13,7 +13,7 @@ function seeded() {
     second: { ...common, id: 'second', requestId: 'request-2', payerUid: 'bob', requesterUid: 'alice', amountMinor: 2000, reference: 'Coffee', createdAt: '2026-10-20T11:00:00Z', completedAt: '2026-10-20T11:01:00Z' },
     legacy: { id: 'legacy', userId: 'alice', type: 'send', amount: 10.5, status: 'succeeded', timestamp: '2025-01-01T12:00:00Z' },
   }, notifications: { alice: { paid: { recipientUid: 'alice', eventType: 'payment_completed', createdAt: '2026-10-20T11:01:00Z' } } } };
-  const context = testContext({ routes: ['auth', 'users'], seed });
+  const context = testContext({ routes, seed });
   return { ...context, tokens: Object.fromEntries([alice, bob, outsider].map(user => [user.uid, `Bearer ${issueSession(user, context.config).token}`])) };
 }
 
@@ -26,6 +26,28 @@ describe('private activity, receipts and profile compatibility', () => {
     expect(received.body.transaction).toMatchObject({ transactionId: 'first', amountMinor: 10001, role: 'received' });
     expect(sent.body.receipt.disclaimer).toContain('No real funds transferred');
     await request(app).get('/api/users/transactions/first').set('Authorization', tokens.outsider).expect(404);
+  });
+  it('ignores a legacy owner on canonical records across receipts, history and stats', async () => {
+    const { app, repository, tokens } = seeded({ routes: ['auth', 'users', 'payments'] });
+    const mixed = { ...await repository.read('transactions/first'), userId: 'outsider' };
+    await repository.set('transactions/first', mixed);
+
+    for (const path of ['/api/users/transactions/first', '/api/payments/transactions/first']) {
+      const rejected = await request(app).get(path).set('Authorization', tokens.outsider).expect(404);
+      expect(rejected.body.code).toBe('TRANSACTION_NOT_FOUND');
+      for (const [uid, role] of [['alice', 'sent'], ['bob', 'received']]) {
+        const result = await request(app).get(path).set('Authorization', tokens[uid]).expect(200);
+        expect(result.body.transaction).toMatchObject({ id: 'first', role, amountMinor: 10001, legacy: false });
+      }
+    }
+    for (const path of ['/api/users/transactions', '/api/payments/history']) {
+      const history = await request(app).get(path).set('Authorization', tokens.outsider).expect(200);
+      expect(history.body.transactions).toEqual([]);
+      expect(history.body.pagination.total).toBe(0);
+    }
+    const stats = await request(app).get('/api/users/stats').set('Authorization', tokens.outsider).expect(200);
+    expect(stats.body.stats).toMatchObject({ totalTransactions: 0, totalSentMinor: 0, totalReceivedMinor: 0, lastTransaction: null });
+    expect(await repository.read('transactions/first')).toEqual(mixed);
   });
   it('filters, searches and paginates actual canonical and legacy records', async () => {
     const { app, tokens } = seeded();

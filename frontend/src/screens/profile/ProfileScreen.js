@@ -1,365 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Image,
-} from 'react-native';
-import {
-  Card,
-  Title,
-  Paragraph,
-  Button,
-  Text,
-  Avatar,
-  List,
-  Divider,
-  ActivityIndicator,
-} from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import { userAPI } from '../../config/api';
-import { theme, colors, spacing } from '../../styles/theme';
+import React, { useRef, useState } from 'react';
+import { View } from 'react-native';
+import { AppButton, AppCard, AppHeader, AppScreen, AppText, ConfirmBottomSheet, DemoModeBadge, ErrorState, FormError, LoadingSkeleton } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import toastService from '../../services/toastService';
+import useProfile from '../../features/profile/useProfile';
+import ProfileAvatar from '../../features/profile/ProfileAvatar';
 
 export default function ProfileScreen({ navigation }) {
-  const [userData, setUserData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const { user, logout } = useAuth();
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  // Refresh profile data when screen comes into focus (e.g., returning from Settings)
-  useFocusEffect(
-    React.useCallback(() => {
-      loadUserData();
-    }, [])
-  );
-
-  const loadUserData = async () => {
-    try {
-      if (user) {
-        // Load fresh profile data from API to get photo URL
-        const response = await userAPI.getProfile();
-        console.log('Profile data loaded:', response.data.user);
-        console.log('Photo URL:', response.data.user.photoUrl);
-        setUserData(response.data.user);
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-      // Fallback to context user data
-      if (user) {
-        setUserData(user);
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  const { logout } = useAuth();
+  const { profile, loading, error, refresh } = useProfile(navigation);
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState('');
+  const lock = useRef(false);
+  const signOut = async () => {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    try { await logout(); }
+    catch { setFailure('Signed out on this screen. Reconnect to finish ending your server session.'); }
+    finally { lock.current = false; setBusy(false); setConfirm(false); }
   };
-
-  const handleLogout = () => {
-    setShowLogoutConfirm(true);
-  };
-
-  const confirmLogout = async () => {
-    setShowLogoutConfirm(false);
-    try {
-      await logout();
-      toastService.success('Logged Out', 'You have been successfully logged out');
-      console.log('Logout successful');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toastService.error('Logout Failed', 'An error occurred during logout');
-    }
-  };
-
-  const cancelLogout = () => {
-    setShowLogoutConfirm(false);
-  };
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={[colors.primary, colors.primaryDark]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          {userData?.photoUrl ? (
-            <>
-              {console.log('Rendering photo with URL:', userData.photoUrl)}
-              <Image 
-                source={{ uri: userData.photoUrl }} 
-                style={styles.profilePhoto}
-                onError={(error) => console.log('Image load error:', error)}
-                onLoad={() => console.log(' Image loaded successfully')}
-              />
-            </>
-          ) : (
-            <>
-              {console.log(' No photo URL, showing avatar with initials:', `${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`)}
-              <Avatar.Text
-                size={80}
-                label={`${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`}
-                style={styles.avatar}
-              />
-            </>
-          )}
-          <Title style={styles.userName}>
-            {userData?.firstName} {userData?.lastName}
-          </Title>
-          <Paragraph style={styles.userEmail}>{userData?.email}</Paragraph>
-          {userData?.phoneNumber && (
-            <Paragraph style={styles.userPhone}>{userData.phoneNumber}</Paragraph>
-          )}
-        </View>
-      </LinearGradient>
-
-      <View style={styles.content}>
-        {/* Menu Options */}
-        <Card style={styles.menuCard}>
-          <Card.Content>
-            <List.Item
-              title="My Profile"
-              description="Update your details and profile photo"
-              left={(props) => <Ionicons name="person" size={24} color={colors.black} />}
-              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => navigation.navigate('MyProfile')}
-              style={styles.menuItem}
-            />
-            <Divider />
-            <List.Item
-              title="My Cards"
-              description="Manage your linked payment cards"
-              left={(props) => <Ionicons name="card" size={24} color={colors.black} />}
-              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => navigation.navigate('Cards')}
-              style={styles.menuItem}
-            />
-            <Divider />
-            <List.Item
-              title="Settings"
-              description="Change password and app preferences"
-              left={(props) => <Ionicons name="settings" size={24} color={colors.black} />}
-              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => navigation.navigate('Settings')}
-              style={styles.menuItem}
-            />
-            
-            <List.Item
-              title="Logout"
-              description="Sign out of your account"
-              left={(props) => <Ionicons name="log-out" size={24} color={colors.error} />}
-              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={handleLogout}
-              style={styles.menuItem}
-            />
-          </Card.Content>
-        </Card>
-
-        {/* App Information */}
-        <Card style={styles.infoCard}>
-          <Card.Content>
-            <Title style={styles.cardTitle}>About This App</Title>
-            <Paragraph style={styles.infoText}>
-              QR Money Transfer is a prototype application designed to demonstrate 
-              cross-bank money transfers in Namibia using QR codes.
-            </Paragraph>
-            <Paragraph style={styles.infoText}>
-              This application uses sandbox APIs for demonstration purposes and is not 
-              intended for real financial transactions.
-            </Paragraph>
-            <View style={styles.versionInfo}>
-              <Text style={styles.versionText}>Version 1.0.0</Text>
-              <Text style={styles.versionText}>© 2025 QR Money Transfer</Text>
-            </View>
-          </Card.Content>
-        </Card>
-      </View>
-
-      {/* Custom Logout Confirmation Dialog */}
-      {showLogoutConfirm && (
-        <View style={styles.overlay}>
-          <View style={styles.confirmationDialog}>
-            <Text style={styles.dialogTitle}>Logout</Text>
-            <Text style={styles.dialogMessage}>Are you sure you want to logout?</Text>
-            <View style={styles.dialogButtons}>
-              <Button
-                mode="outlined"
-                onPress={cancelLogout}
-                style={styles.cancelButton}
-                textColor={colors.textSecondary}
-              >
-                Cancel
-              </Button>
-              <Button
-                mode="contained"
-                onPress={confirmLogout}
-                style={styles.logoutButton}
-                buttonColor={colors.error}
-                textColor={colors.white}
-              >
-                Logout
-              </Button>
-            </View>
-          </View>
-        </View>
-      )}
-    </ScrollView>
-  );
+  return <AppScreen contentStyle={{ gap: 20 }}>
+    <AppHeader title="Your profile" kicker="ACCOUNT" subtitle="Your details, your preferences." />
+    {loading && !profile ? <LoadingSkeleton label="Loading profile" lines={4} /> : !profile ? <ErrorState message={error} onRetry={refresh} /> : <>
+      <FormError message={error || failure} />
+      <AppCard style={{ gap: 16 }}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}><ProfileAvatar profile={profile} />
+        <View style={{ flex: 1, gap: 5 }}><AppText variant="h2">{profile.firstName} {profile.lastName}</AppText><AppText variant="body2" color="textSecondary">{profile.email}</AppText></View></View><DemoModeBadge />
+      </AppCard>
+      <AppCard style={{ gap: 8 }}>
+        <AppButton title="My profile" icon="person-outline" variant="ghost" onPress={() => navigation.navigate('MyProfile')} />
+        <AppButton title="Test instruments" icon="card-outline" variant="ghost" onPress={() => navigation.navigate('Cards')} />
+        <AppButton title="Settings" icon="settings-outline" variant="ghost" onPress={() => navigation.navigate('Settings')} />
+        <AppButton title="Help and FAQ" icon="help-circle-outline" variant="ghost" onPress={() => navigation.navigate('Help')} />
+        <AppButton title="About and privacy" icon="information-circle-outline" variant="ghost" onPress={() => navigation.navigate('About')} />
+      </AppCard>
+      <AppText variant="caption" color="textSecondary">NamPay is a demonstration. Test instruments and receipts do not move real funds.</AppText>
+    </>}
+    <AppButton title="Sign out" icon="log-out-outline" variant="secondary" onPress={() => { setFailure(''); setConfirm(true); }} />
+    <ConfirmBottomSheet visible={confirm} title="Sign out of NamPay?" message="Your local session will be cleared. You’ll need to sign in to view this account again." confirmLabel="Sign out now" onConfirm={signOut} onCancel={() => setConfirm(false)} loading={busy} />
+  </AppScreen>;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  header: {
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  avatar: {
-    backgroundColor: colors.white,
-    marginBottom: spacing.md,
-  },
-  profilePhoto: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.white,
-    marginBottom: spacing.md,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.white,
-    marginBottom: spacing.xs,
-  },
-  userEmail: {
-    fontSize: 16,
-    color: colors.white,
-    opacity: 0.9,
-    marginBottom: spacing.xs,
-  },
-  userPhone: {
-    fontSize: 14,
-    color: colors.white,
-    opacity: 0.8,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  menuCard: {
-    elevation: 4,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
-  menuItem: {
-    paddingVertical: spacing.sm,
-  },
-  infoCard: {
-    elevation: 2,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
-  infoText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.md,
-  },
-  versionInfo: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  versionText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  // Custom Dialog Styles
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  confirmationDialog: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: spacing.lg,
-    margin: spacing.lg,
-    minWidth: 280,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  dialogTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  dialogMessage: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  dialogButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  cancelButton: {
-    flex: 1,
-    borderColor: colors.border,
-  },
-  logoutButton: {
-    flex: 1,
-  },
-});

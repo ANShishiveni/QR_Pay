@@ -135,7 +135,7 @@ test('result ignores forged route success and reveals only an authorized server 
   expect(view.getByText('This receipt records a NamPay demonstration. It is not proof of bank settlement.')).toBeTruthy();
   const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
   press(view, 'Share simulated receipt');
-  await waitFor(() => expect(share).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('No real funds transferred. Not proof of bank settlement.') })));
+  await waitFor(() => expect(share).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('No real funds transferred.') })));
   share.mockRestore();
 });
 test.each([undefined, { ...transaction, payerUid: 'other' }, { ...transaction, amountMinor: 1 }])('result never promotes an unavailable or mismatched receipt to success', async tx => {

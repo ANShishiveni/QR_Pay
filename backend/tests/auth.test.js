@@ -69,6 +69,20 @@ describe('authentication and private account APIs', () => {
     await request(app).get('/api/auth/verify').set('Authorization', bearer(account.token)).expect(401);
   });
 
+  it('T-13 rejects a correctly signed token from a different issuer', async () => {
+    const { app, config } = context();
+    const account = await register(app);
+    await request(app).get('/api/auth/verify').set('Authorization', bearer(account.token)).expect(200);
+
+    const claims = jwt.decode(account.token);
+    const otherIssuerToken = jwt.sign({ ...claims, iss: 'another-application' }, config.jwtSecret, { algorithm: 'HS256' });
+    // Signature, current account, audience, expiry and session claims remain valid.
+    expect(jwt.verify(otherIssuerToken, config.jwtSecret, { algorithms: ['HS256'] }).aud).toBe(config.jwtAudience);
+    const response = await request(app).get('/api/auth/verify').set('Authorization', bearer(otherIssuerToken)).expect(401);
+    expect(response.body.code).toBe('SESSION_EXPIRED');
+    expect(response.body).not.toHaveProperty('user');
+  });
+
   it('rejects disabled accounts and revokes only the logged-out session', async () => {
     const { app, repository } = context();
     const account = await register(app);

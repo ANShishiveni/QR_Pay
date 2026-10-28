@@ -1,368 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Image,
-} from 'react-native';
-import {
-  Card,
-  Title,
-  Paragraph,
-  Button,
-  Text,
-  TextInput,
-  Avatar,
-  List,
-  Divider,
-  ActivityIndicator,
-} from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
+import { AppButton, AppCard, AppHeader, AppScreen, AppText, AppTextField, ErrorState, FormError, LoadingSkeleton, StatusBadge } from '../../components/ui';
 import { userAPI } from '../../config/api';
-import { theme, colors, spacing } from '../../styles/theme';
 import { useAuth } from '../../context/AuthContext';
-import toastService from '../../services/toastService';
+import { nameError, errorMessage } from '../auth/authFormUtils';
+import useProfile from '../../features/profile/useProfile';
+import ProfileAvatar from '../../features/profile/ProfileAvatar';
+import PhotoPicker from '../../features/profile/PhotoPicker';
 
 export default function MyProfileScreen({ navigation }) {
-  const [userData, setUserData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-  });
-  const { user } = useAuth();
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
+  const { profile, loading, error, refresh, replace } = useProfile(navigation);
+  const { checkAuthStatus } = useAuth();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [errors, setErrors] = useState({});
+  const [failure, setFailure] = useState('');
+  const [success, setSuccess] = useState('');
+  const [busy, setBusy] = useState('');
+  const [photo, setPhoto] = useState(null);
+  const lock = useRef(false);
+  useEffect(() => { if (profile) { setFirstName(profile.firstName || ''); setLastName(profile.lastName || ''); } }, [profile?.uid]);
+  const begin = label => { if (lock.current) return false; lock.current = true; setBusy(label); setFailure(''); setSuccess(''); return true; };
+  const end = () => { lock.current = false; setBusy(''); };
+  const saveNames = async () => {
+    const next = { firstName: nameError(firstName, 'first name'), lastName: nameError(lastName, 'last name') };
+    setErrors(next);
+    if (Object.values(next).some(Boolean) || !begin('names')) return;
     try {
-      if (user) {
-        const response = await userAPI.getProfile();
-        setUserData(response.data.user);
-        setFormData({
-          firstName: response.data.user.firstName || '',
-          lastName: response.data.user.lastName || '',
-          email: response.data.user.email || '',
-          phoneNumber: response.data.user.phoneNumber || '',
-        });
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-      toastService.error('Error', 'Failed to load profile data');
-    } finally {
-      setIsLoading(false);
-    }
+      const response = await userAPI.updateProfile({ firstName: firstName.trim(), lastName: lastName.trim() });
+      replace(response.data.user);
+      setSuccess('Your name has been saved.');
+      await checkAuthStatus({ background: true });
+    } catch (cause) { setFailure(errorMessage(cause, 'We could not save your name. Try again.')); }
+    finally { end(); }
   };
-
-  const handleUpdateProfile = async () => {
-    if (!formData.firstName.trim() || !formData.lastName.trim()) {
-      toastService.error('Validation Error', 'First name and last name are required');
-      return;
-    }
-
-    setIsUpdating(true);
+  const selectPhoto = async read => {
+    if (!begin('reading')) return;
+    try { const value = await read(); if (value) setPhoto(value); }
+    catch (cause) { setFailure(cause.message || 'We could not read that photo. Choose another image.'); }
+    finally { end(); }
+  };
+  const savePhoto = async () => {
+    if (!photo || !begin('photo')) return;
     try {
-      const response = await userAPI.updateProfile(formData);
-      setUserData(response.data.user);
-      setEditMode(false);
-      toastService.success('Success', 'Profile updated successfully');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toastService.error('Error', 'Failed to update profile');
-    } finally {
-      setIsUpdating(false);
-    }
+      const response = await userAPI.uploadPhoto({ photo });
+      replace({ ...profile, photoUrl: response.data.photoUrl });
+      setPhoto(null);
+      setSuccess('Your profile photo has been saved.');
+      await checkAuthStatus({ background: true });
+    } catch (cause) { setFailure(errorMessage(cause, 'We could not save your photo. Try again.')); }
+    finally { end(); }
   };
-
-  const handleChangePhoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        toastService.error('Permission Required', 'Please grant permission to access your photo library');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const photoUri = result.assets[0].uri;
-        
-        // Convert image to base64
-        const response = await fetch(photoUri);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        
-        reader.onloadend = async () => {
-          const base64 = reader.result;
-            try {
-              await userAPI.uploadPhoto({ photo: base64 });
-              toastService.success('Success', 'Profile photo updated successfully');
-              loadUserData(); // Reload to get updated photo
-            } catch (error) {
-              console.error('Error uploading photo:', error);
-              toastService.error('Error', 'Failed to update profile photo');
-            }
-        };
-        
-        reader.readAsDataURL(blob);
-      }
-    } catch (error) {
-      console.error('Error selecting photo:', error);
-      toastService.error('Error', 'Failed to select photo');
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading profile...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={[colors.primary, colors.primaryDark]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          {userData?.photoUrl ? (
-            <Image 
-              source={{ uri: userData.photoUrl }} 
-              style={styles.profilePhoto}
-            />
-          ) : (
-            <Avatar.Text
-              size={80}
-              label={`${userData?.firstName?.[0] || ''}${userData?.lastName?.[0] || ''}`}
-              style={styles.avatar}
-            />
-          )}
-          <Title style={styles.userName}>
-            {userData?.firstName} {userData?.lastName}
-          </Title>
-          <Paragraph style={styles.userEmail}>{userData?.email}</Paragraph>
-        </View>
-      </LinearGradient>
-
-      <View style={styles.content}>
-        {/* Profile Actions */}
-        <Card style={styles.actionCard}>
-          <Card.Content>
-            <List.Item
-              title="Change Profile Photo"
-              description="Update your profile picture"
-              left={(props) => <Ionicons name="camera" size={24} color={colors.black} />}
-              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={handleChangePhoto}
-              style={styles.menuItem}
-            />
-            <Divider />
-            <List.Item
-              title={editMode ? "Cancel Edit" : "Update Details"}
-              description={editMode ? "Cancel editing" : "Edit your personal information"}
-              left={(props) => <Ionicons name={editMode ? "close" : "create"} size={24} color={colors.black} />}
-              right={(props) => <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-              onPress={() => setEditMode(!editMode)}
-              style={styles.menuItem}
-            />
-          </Card.Content>
-        </Card>
-
-        {/* Profile Details */}
-        <Card style={styles.detailsCard}>
-          <Card.Content>
-            <Title style={styles.cardTitle}>Personal Information</Title>
-            
-            {editMode ? (
-              <View style={styles.editForm}>
-                <TextInput
-                  label="First Name"
-                  value={formData.firstName}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, firstName: text }))}
-                  mode="outlined"
-                  style={styles.input}
-                />
-                <TextInput
-                  label="Last Name"
-                  value={formData.lastName}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, lastName: text }))}
-                  mode="outlined"
-                  style={styles.input}
-                />
-                <TextInput
-                  label="Email"
-                  value={formData.email}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, email: text }))}
-                  mode="outlined"
-                  keyboardType="email-address"
-                  style={styles.input}
-                />
-                <TextInput
-                  label="Phone Number"
-                  value={formData.phoneNumber}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, phoneNumber: text }))}
-                  mode="outlined"
-                  keyboardType="phone-pad"
-                  style={styles.input}
-                />
-                
-                <Button
-                  mode="contained"
-                  onPress={handleUpdateProfile}
-                  loading={isUpdating}
-                  disabled={isUpdating}
-                  style={styles.updateButton}
-                >
-                  {isUpdating ? 'Updating...' : 'Update Profile'}
-                </Button>
-              </View>
-            ) : (
-              <View style={styles.detailsList}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>First Name:</Text>
-                  <Text style={styles.detailValue}>{userData?.firstName}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Last Name:</Text>
-                  <Text style={styles.detailValue}>{userData?.lastName}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Email:</Text>
-                  <Text style={styles.detailValue}>{userData?.email}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Phone:</Text>
-                  <Text style={styles.detailValue}>{userData?.phoneNumber || 'Not provided'}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Member Since:</Text>
-                  <Text style={styles.detailValue}>
-                    {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString() : 'Unknown'}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </Card.Content>
-        </Card>
-      </View>
-    </ScrollView>
-  );
+  return <AppScreen contentStyle={{ maxWidth: 680, gap: 20 }}>
+    <AppHeader title="My profile" kicker="ACCOUNT DETAILS" subtitle="Make this demo account your own." onBack={() => navigation.goBack()} />
+    {loading && !profile ? <LoadingSkeleton label="Loading profile details" lines={4} /> : !profile ? <ErrorState message={error} onRetry={refresh} /> : <>
+      <FormError message={failure || error} />{success ? <AppText accessibilityRole="alert" color="primary">{success}</AppText> : null}
+      <AppCard style={{ gap: 16, alignItems: 'center' }}><ProfileAvatar profile={profile} photo={photo} size={88} />
+        <PhotoPicker onSelect={selectPhoto} disabled={!!busy} />
+        <AppText variant="caption" color="textSecondary">PNG, JPEG or WebP · maximum 1 MB</AppText>
+        {photo ? <View style={{ alignSelf: 'stretch', gap: 8 }}><AppText variant="body2" color="textSecondary">Preview only. Save to upload this photo to your demo account.</AppText><AppButton title="Save photo" loading={busy === 'photo'} disabled={!!busy} onPress={savePhoto} /><AppButton title="Discard photo" variant="ghost" disabled={!!busy} onPress={() => setPhoto(null)} /></View> : null}
+      </AppCard>
+      <AppCard style={{ gap: 18 }}><AppText variant="h3" accessibilityRole="header">Your name</AppText>
+        <AppTextField label="First name" value={firstName} onChangeText={value => { setFirstName(value); setSuccess(''); setErrors(current => ({ ...current, firstName: '' })); }} error={errors.firstName} autoComplete="given-name" maxLength={60} editable={!busy} />
+        <AppTextField label="Last name" value={lastName} onChangeText={value => { setLastName(value); setSuccess(''); setErrors(current => ({ ...current, lastName: '' })); }} error={errors.lastName} autoComplete="family-name" maxLength={60} editable={!busy} />
+        <AppButton title="Save name" onPress={saveNames} loading={busy === 'names'} disabled={!!busy} />
+      </AppCard>
+      <AppCard style={{ gap: 16 }}><AppText variant="h3" accessibilityRole="header">Contact details</AppText>
+        <AppTextField label="Email address" value={profile.email || ''} editable={false} hint="Read-only in this demo" />
+        <StatusBadge status={profile.emailVerified ? 'verified' : 'pending'} label={profile.emailVerified ? 'Email verified' : 'Email not verified'} />
+        <AppTextField label="Phone number" value={profile.phoneNumber || 'Not provided'} editable={false} hint="Read-only in this demo" />
+        <StatusBadge status={profile.phoneVerified ? 'verified' : 'pending'} label={profile.phoneVerified ? 'Phone verified' : 'Phone not verified'} />
+        <AppText variant="body2" color="textSecondary">Contact changes require ownership verification. Verified email and phone change services are not available in this environment. A synthetic demo verification code does not verify a real phone number.</AppText>
+      </AppCard>
+    </>}
+  </AppScreen>;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  header: {
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  profilePhoto: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: spacing.md,
-  },
-  avatar: {
-    marginBottom: spacing.md,
-    backgroundColor: colors.primary,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.white,
-    marginBottom: spacing.xs,
-  },
-  userEmail: {
-    fontSize: 16,
-    color: colors.white,
-    opacity: 0.8,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  actionCard: {
-    elevation: 4,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
-  detailsCard: {
-    elevation: 4,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  menuItem: {
-    paddingVertical: spacing.sm,
-  },
-  editForm: {
-    marginTop: spacing.md,
-  },
-  input: {
-    marginBottom: spacing.md,
-  },
-  updateButton: {
-    marginTop: spacing.md,
-  },
-  detailsList: {
-    marginTop: spacing.md,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  detailLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  detailValue: {
-    fontSize: 16,
-    color: colors.text,
-    flex: 2,
-    textAlign: 'right',
-  },
-});

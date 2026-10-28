@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import apiClient, { authAPI, otpAPI, qrAPI } from '../api';
+import apiClient, { authAPI, otpAPI, qrAPI, userAPI } from '../api';
 import sessionStorage from '../../services/storage/sessionStorage';
 import { onSessionExpired } from '../../services/sessionEvents';
 
@@ -63,5 +63,21 @@ test('a guest verification response stays with the startup verifier instead of b
     await expect(authAPI.verifyToken()).rejects.toMatchObject({ response: { status: 401 } });
     expect(expired).not.toHaveBeenCalled();
     expect(sessionStorage.clearToken).toHaveBeenCalledTimes(1);
+  } finally { unsubscribe(); }
+});
+
+test('incorrect password-change proof does not invalidate an otherwise valid session', async () => {
+  const expired = jest.fn();
+  const unsubscribe = onSessionExpired(expired);
+  apiClient.defaults.adapter = async config => {
+    throw Object.assign(new Error('Incorrect password'), {
+      config, response: { status: 401, data: { code: 'REAUTHENTICATION_FAILED', error: 'Your current password is incorrect' } },
+    });
+  };
+  try {
+    await expect(userAPI.changePassword({ currentPassword: 'wrong proof', newPassword: 'a synthetic new passphrase' }))
+      .rejects.toMatchObject({ code: 'REAUTHENTICATION_FAILED' });
+    expect(expired).not.toHaveBeenCalled();
+    expect(sessionStorage.clearToken).not.toHaveBeenCalled();
   } finally { unsubscribe(); }
 });
