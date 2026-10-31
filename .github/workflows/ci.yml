@@ -22,7 +22,6 @@ jobs:
       EXPO_NO_TELEMETRY: '1'
       EXPO_NO_DOTENV: '1'
       FIREBASE_CLI_DISABLE_TELEMETRY: '1'
-      NAMPAY_EMULATOR_TOOLS: ${{ runner.temp }}/nampay-firebase-tools
     steps:
       - name: Check out repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -69,9 +68,13 @@ jobs:
         run: npm run typecheck
 
       - name: Install pinned Firebase CLI
+        env:
+          NAMPAY_EMULATOR_TOOLS: ${{ runner.temp }}/nampay-firebase-tools
         run: bash scripts/install-emulators.sh
 
       - name: Real Firebase rules, concurrency and server startup
+        env:
+          NAMPAY_EMULATOR_TOOLS: ${{ runner.temp }}/nampay-firebase-tools
         run: bash scripts/emulators.sh exec 'node scripts/emulator-smoke.cjs && node scripts/emulator-payment-smoke.cjs && node scripts/emulator-server-smoke.cjs'
 
       - name: Compile web and native bundles with placeholder API

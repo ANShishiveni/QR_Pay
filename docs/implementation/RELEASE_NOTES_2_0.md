@@ -86,6 +86,8 @@ on the pull request; the workflow's presence alone is not a passing run.
 after export to create a versioned archive and SHA256 manifest in
 `.local/artifacts`. The placeholder origin is non-resolving; this output proves
 compilation and is **not an APK, IPA or configured deployment**.
+The generated archive, exact source revision and verified SHA256 are recorded
+in [build evidence](../testing/BUILD_EVIDENCE.md).
 
 Android build configuration and a guarded local helper are included. The actual
 31 October preflight reports missing SDK Platform 35, Build-Tools 35, adb, NDK,
