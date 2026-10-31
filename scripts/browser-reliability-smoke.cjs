@@ -49,7 +49,7 @@ async function api(page, method, route, body, expected = 200) {
     assert.equal(creations, 0, 'Reconnection must not replay a queued write');
     await button(page, 'Create QR request').click();
     await page.getByTestId('request-qr-image').waitFor();
-    assert.equal(creations, 1);
+    assert.equal(creations, 1, 'The explicit request action must send exactly one creation');
 
     await page.reload({ waitUntil: 'networkidle' });
     await page.getByRole('tab', { name: 'Home', exact: true, selected: true }).waitFor();
@@ -63,10 +63,13 @@ async function api(page, method, route, body, expected = 200) {
     await button(page, 'Sign out').click();
     const dialog = page.getByRole('dialog', { name: 'Sign out of NamPay?', exact: true });
     await dialog.waitFor();
-    assert.equal(await page.getByRole('dialog').count(), 1);
-    for (let index = 0; index < 5; index += 1) {
-      await page.keyboard.press('Tab');
-      assert.equal(await page.evaluate(() => Boolean(document.activeElement?.closest('[role="dialog"]'))), true);
+    assert.equal(await page.getByRole('dialog').count(), 1, 'The confirmation must expose exactly one dialog');
+    for (const key of ['Tab', 'Shift+Tab']) {
+      for (let index = 0; index < 5; index += 1) {
+        await page.keyboard.press(key);
+        assert.equal(await page.evaluate(() => Boolean(document.activeElement?.closest('[role="dialog"]'))), true,
+          `${key} must keep focus inside the confirmation dialog`);
+      }
     }
     await saveScreenshot(page, 'confirmation-light-compact');
     await page.keyboard.press('Escape');
@@ -77,7 +80,7 @@ async function api(page, method, route, body, expected = 200) {
     await button(page, 'Mark request created as read').click();
     await page.getByText('0 unread updates', { exact: true }).waitFor();
     const events = (await api(page, 'GET', 'users/notifications')).notifications;
-    assert.equal(events.length, 1); assert.ok(events[0].readAt);
+    assert.equal(events.length, 1, 'The account must retain exactly one request event'); assert.ok(events[0].readAt);
     await saveScreenshot(page, 'notifications-light-compact');
     await button(page, 'Go back').click();
     await button(page, 'Settings').click();
@@ -90,7 +93,10 @@ async function api(page, method, route, body, expected = 200) {
     await page.getByText('In-app alerts are off', { exact: true }).waitFor();
     await page.getByText('1 unread update', { exact: true }).waitFor();
     await button(page, 'Go back').click();
-    assert.equal(await button(page, 'Notifications').count(), 1);
+    // Normal-motion navigation hides the previous screen until its transition
+    // finishes. Locator count does not wait for that screen to become visible.
+    await button(page, 'Notifications').waitFor({ state: 'visible' });
+    assert.equal(await button(page, 'Notifications').count(), 1, 'The returned Profile must expose one unbadged inbox action');
     await assertNoHorizontalOverflow(page);
     await page.setViewportSize({ width: 1280, height: 900 });
     await assertNoHorizontalOverflow(page);

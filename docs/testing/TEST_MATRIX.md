@@ -131,7 +131,7 @@ sections above are intentionally unchanged.
 | Chromium auth/payment/features/reliability | `npm run test:browser` starts disposable localhost services using Metro | **All five runs passed**: auth, payment, features, reliability with reduced motion, reliability with normal motion; includes final CSS/200% zoom and browser credential-storage checks |
 | Web/native JavaScript exports | `npm --prefix frontend run build:bundles` with Expo **53.0.27**, React Native **0.79.6** and TypeScript **5.8.3** | **Web, Android and iOS exports passed** into `frontend/dist-native`; these JS/assets are not an APK/IPA or native installation |
 | Android build/device; iOS | No successful APK compilation, installation or physical/emulator runtime execution | **Not verified**; see [NATIVE_ACCEPTANCE.md](NATIVE_ACCEPTANCE.md) |
-| Remote CI | Workflow and local runner are available | No remote CI run is claimed by this matrix |
+| Remote CI | Hosted run exercised installs, scans,115/368 tests, typecheck, real Firebase and exports | Current result is tracked in [PR6 checks](https://github.com/ANShishiveni/QR_Pay/pull/6). The first executable run exposed a normal-motion browser timing assertion; its transition wait was corrected. |
 
 Saved local evidence: `.local/evidence/static-unit-release.log`,
 `firebase-release.log`, `browser-release.log` and `bundles-release.log` in the
@@ -199,7 +199,7 @@ behavior. The source abbreviations below refer to the backend suites above;
 | Activity/receipts | Empty versus error states, filters/pagination, ownership, masked simulation metadata and safe exports | **Passed API/component/browser:** activity model/screens cover date boundaries, pagination overlap and stale responses; receipt export allowlists/escapes data; actual browser download includes canonical ID/disclaimer and omits email. Native share API is mocked; OS share-sheet execution remains unverified |
 | Profile/settings | Validated persistent names/photo, contact-verification limits, password proof, theme/alert preferences and honest capabilities | **Passed API/component/browser:** profile/photo preview requires explicit save; contact edits are read-only without verified delivery; wrong password preserves the session and successful change revokes it; theme radios support keys/persistence. Native picker and biometric hardware not run |
 | In-app notifications | Owned/deduplicated events, expiry without opening request history, first read marker, account/lifecycle isolation, muted alerts retain history | **Passed API/component/browser:** `notifications` covers atomic expiry/dedup/read ownership; provider/screens cover stale responses, foreground polling and read reconciliation; reliability browser verifies read markers and muted inbox. No push/lock-screen notification delivery is implemented or claimed |
-| Accessibility/components | Labels, announced state, focus, disabled/loading controls, error recovery, modal semantics and non-color status | **Passed within tested scope:** native component mocks plus five actual React Native Web/DOM markup tests; browser tab arrows, dialog Tab trap/Escape/restore, input associations and theme radios. TalkBack/VoiceOver, Shift+Tab, spoken announcements and every-screen enlarged-text review remain unverified |
+| Accessibility/components | Labels, announced state, focus, disabled/loading controls, error recovery, modal semantics and non-color status | **Passed within tested scope:** native component mocks plus five actual React Native Web/DOM markup tests; browser tab arrows, dialog Tab/Shift+Tab trap/Escape/restore, input associations and theme radios. TalkBack/VoiceOver, spoken announcements and every-screen enlarged-text review remain unverified |
 
 ## Device and visual release criteria
 
@@ -231,11 +231,10 @@ not substitutes for Android/iOS, secure storage, biometric or camera testing.
   no IndexedDB databases. This does not establish absence of every secret in
   every future flow or inspect native storage. Production TLS/Secure-cookie
   deployment and real delivery providers have not been exercised.
-- Accessibility still needs Shift+Tab, spoken screen-reader feedback, complete
+- Accessibility still needs spoken screen-reader feedback, complete
   dark/wide/enlarged-text compositions and native font scaling. CSS zoom and
   screenshots cannot close those checks.
-- Remote CI has not run. The local commands and configured workflow establish
-  reproducible gates, not a hosted workflow result.
+- Hosted CI results are tracked in [PR6 checks](https://github.com/ANShishiveni/QR_Pay/pull/6). Local evidence does not substitute for the current hosted result.
 
 ## Evidence recording and commands
 

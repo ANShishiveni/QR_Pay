@@ -141,6 +141,7 @@ and live financial integrations have not been enabled or verified.
 | `requestAccess/<requestId>/<uid>` | Signed-scan grant tied to request expiry |
 | `otpSessions/<id>`; `otpRateLimits/<scope hash>` | Bound verification lifecycle and rate-limit counters |
 | `transactions/<id>` | Canonical completed simulation and private idempotency fingerprint |
+| `paymentOperations/<payerUid>/<key hash>` | Atomically bound operation fingerprint, request and canonical transaction; rejects changed details for a committed key |
 | `userTransactions/<uid>/<id>` | Atomically written participant projection |
 | `notifications/<uid>/<eventType_requestId>` | Deduplicated in-app events and server read timestamp |
 | `migrations/users/<uid>` | Audit metadata for a verified legacy account copy |

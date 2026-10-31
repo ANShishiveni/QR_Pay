@@ -41,7 +41,12 @@ The [pull request](https://github.com/ANShishiveni/QR_Pay/pull/6) is the live so
 of remote CI status. Initial workflow runs were rejected before executing jobs
 because `runner.temp` appeared in job-level environment configuration. Moving it
 to the Firebase steps corrected the context error; actionlint 1.7.12 validated
-the workflow locally. This validation does not assert that GitHub's tests passed.
+the workflow locally. The first executable run passed installs, static/audit checks,
+unit/type checks, real Firebase and exports, then exposed a normal-motion browser
+assertion that counted a returning screen before its transition finished. The
+runner now waits for the expected visible control before preserving the exact
+count assertion. Current hosted results remain on the pull request; these
+individual fixes do not by themselves establish a passing run.
 
 The [native checklist](NATIVE_ACCEPTANCE.md) records the licensed SDK and device
 prerequisites still required for an installable demonstration build and release

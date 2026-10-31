@@ -85,12 +85,13 @@ outcome. The checklist itself is **not a claim that these checks passed**.
 scripts/browser-reliability-smoke.cjs` also passed with normal motion and a200%
 CSS browser zoom layout check. These runs verify explicit tab labels/selection,
 arrow-key activation with focus retained, one named confirmation dialog,
-repeated Tab trapping, Escape/trigger restoration, associated input errors,
+repeated Tab and Shift+Tab trapping, Escape/trigger restoration, associated input errors,
 offline draft preservation and notifications with alerts muted. The separate
 feature smoke verifies appearance radio arrows/Space and saved checked state.
 Screenshots are in `docs/design/screenshots`. Browser zoom is not native font
-scaling; the hardware checklist below remains outstanding. Shift+Tab, live
-screen-reader speech, and every screen at zoom still require manual coverage.
+scaling; the hardware checklist below remains outstanding. The31October rerun
+verified both keyboard directions in reduced and normal motion. Live
+screen-reader speech and every screen at zoom still require manual coverage.
 
 ## Native verification still outstanding
 

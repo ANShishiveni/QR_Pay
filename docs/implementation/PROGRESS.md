@@ -4,7 +4,7 @@ Branch: `feat/nampay-2` · Baseline: `998d2ec571289edbf777a52d9edea50652cf257b`
 
 Machine-readable source: [progress.json](progress.json). Tasks become Done only after their evidence and acceptance criteria are verified.
 
-Updated: 2026-10-31T06:49:09.705618+00:00
+Updated: 2026-10-31T15:46:09.215018+00:00
 
 ## Phase 0 — Baseline and isolated development
 
@@ -83,7 +83,7 @@ Status: **Local automated, browser and export gates passed; native build/device 
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P6-01 | Done | npm test: backend115/7 suites and frontend368/33 suites; typecheck passed; Real Firebase: all3 scripts;9 payment scenarios including cross-request operation-key race; npm run test:browser: all5 runs passed including response loss, offline, privacy and keyboard states; DraftPR6 opened; initialGitHubworkflow context error corrected andactionlint1.7.12 passed; liveCI status onPR | 6cc1f70c | Retain regression gates; consult the pull request checks for live remote CI status |
+| P6-01 | Done | npm test: backend115/7 suites and frontend368/33 suites; typecheck passed; Real Firebase: all3 scripts;9 payment scenarios including cross-request operation-key race; npm run test:browser: all5 runs passed including response loss, offline, privacy and keyboard states; DraftPR6 opened; initialGitHubworkflow context error corrected andactionlint1.7.12 passed; liveCI status onPR; 31Oct final localbrowser runner5/5passed inclTab/ShiftTab, transition-aware normal-motion assertion; Node24 actions/actionlint verified | 6cc1f70c | Retain regression gates; consult the pull request checks for live remote CI status |
 | P6-02 | Done | npm run check: ESLint, source self-test,157 source files/14 configs0 findings, dependency adapters/compatibility passed; 30Oct audits: root0; backend14 and frontend19 moderate/low; no high/critical findings; DEPENDENCY_AUDIT.md records lock hashes, source review, residual reachability and maintenance | 6cc1f70c | Track remaining moderate/low dependency findings and supported upgrades |
 | P6-03 | Blocked | Browser: compact/wide, normal/reduced motion and200% CSS zoom; native is not implied; 31Oct native preflight exit2: licensed SDK components absent; Java/patch checks pass | 6cc1f70c | Authorized SDK license review/provisioning plus Android physical device and emulator; iOS where available |
 | P6-04 | Done | README,SETUP,API,architecture,feature inventory,screenshot gallery,security/test matrix and RELEASE_NOTES_2_0.md updated | 6cc1f70c | Keep final build and remote CI references current |
