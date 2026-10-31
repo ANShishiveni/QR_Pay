@@ -1,6 +1,6 @@
 # NamPay 2.0 security decisions
 
-Status: Phase 1 implementation; automated isolated tests provide evidence. Real Realtime Database emulator concurrency/rules verification now passes, including eight API scenarios and competing confirmations. See docs/testing/EMULATORS.md for the reproducible command and scope. This application remains a simulated-payment prototype.
+Status: implementation through Phase 6 automated verification; native acceptance remains pending. Real Realtime Database emulator concurrency/rules verification now passes, including nine API scenarios and competing confirmations. See docs/testing/EMULATORS.md for the reproducible command and scope. This application remains a simulated-payment prototype.
 
 ## Identity and authentication
 
@@ -53,3 +53,19 @@ API replies carry generated request IDs. Logs include only the request ID and st
 - `backend/tests/foundation.test.js`: import without listeners, conditional memory commits/rollback, fail-closed runtime flags, and Firebase adapter cache/listener ordering with an SDK test double.
 - Payment/OTP tests cover the shared authorization and settlement invariants separately; see `docs/testing/TEST_MATRIX.md` for actual run results.
 - Not verified here: real provider delivery, physical-device SecureStore/biometrics, production security posture or PCI compliance. No live payment operation or SMS was performed.
+
+## Release maintenance and operation keys
+
+Payment commits now bind a SHA-256 hash of each operation key to the payer,
+request, card/session fingerprint and canonical transaction in
+`paymentOperations/{uid}/{keyHash}`. The binding shares the settlement transaction.
+Reusing a committed key for different details returns 409, including two
+concurrent distinct requests. Exact retries return the original outcome.
+Pre-index records gain a binding on an exact retry; their original raw keys
+cannot be reconstructed from historical fingerprints. See PAYMENTS_V2.md for
+that compatibility limit; no production data migration was executed.
+
+The 30 October scans report no high/critical dependency matches, with 14 backend
+and 19 frontend moderate/low nodes remaining in full trees. Scoped adapters and
+residual exposure are documented in DEPENDENCY_AUDIT.md. This result does not
+assert production security approval or replace device and operational checks.

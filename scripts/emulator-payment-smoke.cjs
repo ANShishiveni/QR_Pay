@@ -149,6 +149,35 @@ const firebaseApp = admin.initializeApp({
     assert.equal(Object.keys(await repository.read('transactions')).length, terminal === 'completed' ? 2 : 1);
     passed('cancellation versus confirmation race has exactly one terminal outcome and no duplicate records');
 
+    now += 61_000;
+    const firstOperation = await makeRequest();
+    const firstAuthorization = await issueCode(firstOperation.paymentRequest.id);
+    await api('post', 'otp/verify').send({ sessionId: firstAuthorization.sessionId, otp: firstAuthorization.code }).expect(200);
+    now += 61_000;
+    const secondOperation = await makeRequest();
+    const secondAuthorization = await issueCode(secondOperation.paymentRequest.id);
+    await api('post', 'otp/verify').send({ sessionId: secondAuthorization.sessionId, otp: secondAuthorization.code }).expect(200);
+    const sharedKey = crypto.randomUUID();
+    const operations = [
+      { requestId: firstOperation.paymentRequest.id, sessionId: firstAuthorization.sessionId, cardId: card.id, idempotencyKey: sharedKey },
+      { requestId: secondOperation.paymentRequest.id, sessionId: secondAuthorization.sessionId, cardId: card.id, idempotencyKey: sharedKey },
+    ];
+    const beforeCount = Object.keys(await repository.read('transactions')).length;
+    const keyRace = await Promise.all(operations.map(operation => api('post', 'qr/confirm-payment').send(operation)));
+    assert.deepEqual(keyRace.map(response => response.status).sort(), [200, 409]);
+    assert.equal(keyRace.find(response => response.status === 409).body.code, 'IDEMPOTENCY_KEY_REUSED');
+    const winnerIndex = keyRace.findIndex(response => response.status === 200);
+    const winner = keyRace[winnerIndex].body.transaction;
+    const loser = operations[1 - winnerIndex];
+    const retried = await api('post', 'qr/confirm-payment').send(operations[winnerIndex]).expect(200);
+    assert.equal(retried.body.idempotent, true);
+    assert.equal(retried.body.transaction.id, winner.id);
+    assert.equal(Object.keys(await repository.read('transactions')).length, beforeCount + 1);
+    assert.equal(await repository.read(`paymentRequests/${loser.requestId}/status`), 'pending');
+    assert.equal(await repository.read(`otpSessions/${loser.sessionId}/status`), 'verified');
+    assert.equal(JSON.stringify(await repository.read('paymentOperations')).includes(sharedKey), false);
+    passed('concurrent different requests sharing one payer operation key commit once; losing authorization stays unused and exact retry reconciles');
+
     await api('post', 'auth/logout').expect(200);
     await api('get', 'auth/verify').expect(401);
     passed('logout revocation survives subsequent RTDB-backed session verification');

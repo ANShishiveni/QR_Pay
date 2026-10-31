@@ -1,49 +1,24 @@
-# NamPay Frontend
+# NamPay frontend
 
-A clean, bulletproof React Native Expo app with no warnings.
+Expo53, React19.0.0 and React Native0.79.5; Metro builds both web and native.
+Install with `npm ci --legacy-peer-deps` from this directory. The postinstall
+hook applies a hash-checked Metro adaptation for the patched image-size API.
+Keep the repository's sibling `scripts/` directory when installing/building.
 
-## Quick Start
-
-```bash
-# Install dependencies
-npm install --legacy-peer-deps
-
-# Start development server
-npm start
-
-# Start web version (no warnings)
-npm run clean:web
-
-# Clean install if needed
-npm run clean
+```sh
+EXPO_PUBLIC_API_URL=http://localhost:3000 npm run web -- --localhost
+npm test -- --ci
+npm run typecheck
+EXPO_PUBLIC_API_URL=https://demo-api.example.invalid npm run build:web
 ```
 
-## Testing
+Web runs on localhost:8081. The placeholder HTTPS export command proves bundle
+compilation only; it does not produce a configured payment service. Set an actual
+reachable HTTPS demo API for a distributed build. Every `EXPO_PUBLIC_*` value is
+public client configuration; never put secrets there.
 
-**Android Device:**
-1. Open Expo Go app (version 2.33.21)
-2. Scan QR code from terminal
-3. App loads without errors
-
-**Web Browser:**
-1. Run `npm run clean:web`
-2. Open `http://localhost:19006`
-3. App loads without warnings
-
-## Dependencies
-
-All dependencies are carefully selected for Expo SDK 53 compatibility:
-- `expo: ~53.0.0`
-- `react: 18.2.0`
-- `react-native: 0.76.3`
-- `react-native-paper: ^5.12.3`
-
-##  Configuration
-
-- **webpack.config.js** - Handles vector icons and polyfills
-- **app.json** - Clean Expo configuration
-- **package.json** - Bulletproof dependency versions
-
-##  Guarantee
-
-This setup is **BULLETPROOF** and will work without any warnings or errors!
+See [repository setup](../docs/SETUP.md), [design system](../docs/design/DESIGN_SYSTEM.md),
+[accessibility evidence](../docs/testing/ACCESSIBILITY.md), and
+[native build/acceptance](../docs/testing/NATIVE_ACCEPTANCE.md). Device behavior is
+not inferred from browser or component tests. No warning-free compatibility or
+production-readiness guarantee is made.

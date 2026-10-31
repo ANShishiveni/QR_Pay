@@ -157,7 +157,7 @@ export function createPaymentFlow({ api, requestId, cardId, uid, idempotencyKey,
       if (!await refresh()) return;
       if (new Date(state.session.expiresAt).getTime() <= serverNow()) throw new Error('This verification code has expired. Request a new code.');
       patch({ phase: 'verifying' });
-      let verified = false;
+      let verified;
       try {
         const { data } = await api.otpAPI.verifyOTP(state.session.sessionId, code);
         verified = data.success === true && data.status === 'verified' && data.sessionId === state.session.sessionId && data.requestId === requestId;

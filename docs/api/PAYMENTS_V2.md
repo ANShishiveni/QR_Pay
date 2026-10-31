@@ -164,17 +164,32 @@ not a production-scale payment architecture.
 
 An exact authenticated retry with the same request, payer, card, session and
 operation key returns the original transaction with `idempotent:true`, including
-a retry after a lost HTTP response. A different operation/key or payer cannot
-reuse a completed request. Clients preserve the operation key and reconcile
+a retry after a lost HTTP response. Each payer's committed key is also bound to
+that exact operation across requests: changing the request, card or verification
+session returns 409 `IDEMPOTENCY_KEY_REUSED`, even when the replacement request
+has its own valid verification. Different payers have independent key spaces.
+The key's SHA-256 digest and operation fingerprint are recorded atomically with
+the result; raw keys are neither persisted nor returned. If an indexed canonical
+result is missing, retries fail closed with 503 `PAYMENT_RESULT_UNAVAILABLE`.
+A different operation/key or payer cannot reuse a completed request.
+Clients preserve the operation key and reconcile
 uncertain outcomes with `GET /qr/requests/:id`; they must not infer failure from
 a timeout or generate a fresh key as an automatic retry.
 
 New state uses `paymentRequests/<id>`, `transactions/<id>` and
-`userTransactions/<uid>/<id>`; both projections share amount, status and
+`userTransactions/<uid>/<id>`, plus `paymentOperations/<payerUid>/<keyDigest>`;
+both projections share amount, status and
 canonical ID. Existing historical transaction suffix keys remain readable and
 are deduplicated by inner transaction ID for the appropriate owner. Originals
 are not deleted or rewritten. Recipient-card absence no longer blocks a
 simulation because no bank or card settlement is attempted.
+
+Canonical transactions written before the key index retain their original exact
+retry behavior. An exact retry adds the missing key binding without rewriting
+the transaction. A historical operation fingerprint cannot reveal the original
+key digest; cross-request reuse of a pre-index key cannot be detected until its
+original exact retry supplies that key. Newly committed operations have the
+binding from their first commit.
 
 ## Activity and receipts
 

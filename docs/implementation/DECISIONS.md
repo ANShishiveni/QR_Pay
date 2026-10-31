@@ -27,3 +27,26 @@ Node 24.19.0, npm 11.9.0, Java 21 and Chromium 154 were available. All three ori
 ## Access limitations
 
 HTTPS Git read access succeeds. Listing open pull requests through GitHub GraphQL returned HTTP 403; that does not imply a new personal token is needed. Native device, EAS and App Store capabilities remain unverified. No publication or deployment is implied by local builds or saved cloud configuration.
+
+## Phase 6 dependency maintenance
+
+Web now uses Expo's Metro bundler on port 8081, matching the native pipeline.
+Unused Firebase client, obsolete Expo modules, Webpack and Node browser shims
+were removed. The API remains the only database access boundary. Compatible
+patch updates preserve React 19.0.0, React Native 0.79.6 and Expo SDK 53; no forced
+framework-major upgrade was used to suppress audit findings.
+
+Scoped overrides update image-size, PostCSS and decode-uri-component. Two small
+dependency adapters bridge changed exports/input types, guarded by exact upstream
+and patched source hashes. Clean installation fails on unreviewed source drift.
+`npm run check` verifies the adapters and exercises asset paths, buffers, CSS
+maps and malformed query inputs. These adapters incur maintenance work and do
+not remove the need for a separately tested framework upgrade. Audit evidence,
+remaining lower-severity findings and reachability limits are recorded in
+`docs/security/DEPENDENCY_AUDIT.md`.
+
+Version 2.0.0-demo.0 denotes a simulated demonstration candidate. Web/native
+JavaScript exports with a placeholder HTTPS origin prove compilation only;
+they are not installed Android/iOS applications or a configured deployment.
+Native build configuration never accepts SDK licenses or starts paid cloud
+builds automatically. Physical-device and remote-CI gates remain explicit.

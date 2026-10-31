@@ -15,16 +15,38 @@ async function confirmPayment({ repository, config, uid, body, idempotencyHeader
     throw httpError(400, 'IDEMPOTENCY_KEY_REQUIRED', 'A stable payment operation key is required');
   }
   const fingerprint = operationFingerprint({ uid, requestId, cardId, sessionId, key });
+  // Bind keys across requests for this payer, without persisting raw keys.
+  // This index shares the canonical transaction's atomic commit boundary.
+  const keyHash = crypto.createHash('sha256').update(key).digest('hex');
   // IDs and timestamps are generated outside the retryable transaction callback.
   const transactionId = crypto.randomUUID();
   const now = config.now();
   const timestamp = new Date(now).toISOString();
   let idempotent = false;
   const result = await repository.transaction(root => {
+    const binding = root.paymentOperations?.[uid]?.[keyHash];
+    if (binding) {
+      if (binding.operationFingerprint !== fingerprint || binding.requestId !== requestId) {
+        throw httpError(409, 'IDEMPOTENCY_KEY_REUSED', 'This payment operation key was already used for different details');
+      }
+      const transaction = root.transactions?.[binding.transactionId];
+      const request = root.paymentRequests?.[requestId];
+      if (transaction?.payerUid !== uid || transaction.operationFingerprint !== fingerprint ||
+          request?.status !== 'completed' || request.transactionId !== binding.transactionId) {
+        throw httpError(503, 'PAYMENT_RESULT_UNAVAILABLE', 'The original payment result is temporarily unavailable. Check its status before trying again');
+      }
+      idempotent = true;
+      return root;
+    }
     const existing = root.paymentRequests?.[requestId];
     if (existing?.status === 'completed') {
       const transaction = root.transactions?.[existing.transactionId];
       if (transaction?.payerUid === uid && transaction.operationFingerprint === fingerprint) {
+        // Pre-index transactions retain exact-retry compatibility. The supplied
+        // original key lets this retry add its binding without rewriting history.
+        root.paymentOperations ||= {};
+        root.paymentOperations[uid] ||= {};
+        root.paymentOperations[uid][keyHash] = { operationFingerprint: fingerprint, requestId, transactionId: transaction.id };
         idempotent = true;
         return root;
       }
@@ -81,6 +103,9 @@ async function confirmPayment({ repository, config, uid, body, idempotencyHeader
     delete session.challengeHash;
     root.transactions ||= {};
     root.transactions[transactionId] = transaction;
+    root.paymentOperations ||= {};
+    root.paymentOperations[uid] ||= {};
+    root.paymentOperations[uid][keyHash] = { operationFingerprint: fingerprint, requestId, transactionId };
     root.userTransactions ||= {};
     for (const [ownerUid, role] of [[uid, 'sent'], [requesterUid(request), 'received']]) {
       root.userTransactions[ownerUid] ||= {};

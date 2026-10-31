@@ -1,6 +1,6 @@
 {
   "name": "qr-money-transfer-backend",
-  "version": "1.0.0",
+  "version": "2.0.0-demo.0",
   "description": "Backend server for QR Money Transfer app",
   "main": "server.js",
   "scripts": {

@@ -7,7 +7,7 @@ const path = require('node:path');
 process.env.PLAYWRIGHT_DISABLE_FORCED_CHROMIUM_PROXIED_LOOPBACK = '1';
 const { chromium } = require('playwright');
 
-const webOrigin = process.env.NAMPAY_WEB_ORIGIN || 'http://localhost:19006';
+const webOrigin = process.env.NAMPAY_WEB_ORIGIN || 'http://localhost:8081';
 const apiOrigin = process.env.NAMPAY_SMOKE_API || 'http://localhost:3000';
 const privateValues = new Set();
 const protect = value => { if (typeof value === 'string' && value) privateValues.add(value); return value; };

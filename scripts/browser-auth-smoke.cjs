@@ -11,7 +11,9 @@ const { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreensho
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'light', reducedMotion: 'reduce' });
     const page = await context.newPage();
     const errors = [];
+    const consoleMessages = [];
     page.on('pageerror', error => errors.push(error.message));
+    page.on('console', message => consoleMessages.push(message.text()));
     await page.goto(webOrigin, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: 'Skip', exact: true }).waitFor();
     await saveScreenshot(page, 'onboarding-light-compact');
@@ -97,6 +99,13 @@ const { apiOrigin, webOrigin, launchBrowser, requireDisposableApi, saveScreensho
     await page.getByLabel('Password', { exact: true }).filter({ visible: true }).fill(replacement);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.getByText('Payments', { exact: true }).last().waitFor();
+    const browserStorage = await page.evaluate(() => JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }));
+    for (const secret of [password, replacement, session.value, recovery.token]) {
+      assert.equal(browserStorage.includes(secret), false, 'Private auth material must not enter browser storage');
+      assert.equal(consoleMessages.some(message => message.includes(secret)), false, 'Private auth material must not enter browser console logs');
+    }
+    assert.equal(await page.evaluate(async () => (await indexedDB.databases()).length), 0,
+      'This web app must not create a separate IndexedDB credential store');
     assert.deepEqual(errors, [], 'Browser must have no uncaught runtime errors');
     console.log('PASS: onboarding, compact/wide auth, validation, registration, four tabs, HttpOnly isolation, reload, logout, private recovery and sign-in with the changed password.');
     await context.close();

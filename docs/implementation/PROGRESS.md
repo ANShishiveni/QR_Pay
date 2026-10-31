@@ -4,7 +4,7 @@ Branch: `feat/nampay-2` · Baseline: `998d2ec571289edbf777a52d9edea50652cf257b`
 
 Machine-readable source: [progress.json](progress.json). Tasks become Done only after their evidence and acceptance criteria are verified.
 
-Updated: 2026-10-28T22:45:33.020670+00:00
+Updated: 2026-10-31T06:42:18.154444+00:00
 
 ## Phase 0 — Baseline and isolated development
 
@@ -30,7 +30,7 @@ Status: **Backend security and real Firebase gates passed; native session verifi
 | P1-05 | Done | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed; Real Firebase gate:8 API scenarios;8 concurrent confirmations created exactly1 canonical transaction;rule denial passed | d84d31a6 | Retain memory and real Firebase regression coverage |
 | P1-06 | Done | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | d84d31a6 | Retain regression coverage |
 | P1-07 | Done | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed | d84d31a6 | Retain regression coverage |
-| P1-08 | Needs verification | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed; Browser T-16 response loss after server commit reconciled one canonical result without a second confirmation | d84d31a6 | Complete browser uncertain-outcome and native device cases in later phases |
+| P1-08 | Needs verification | Backend87/87; frontend46/46; TypeScript pass; Live local API: twoaccounts,QR,challenge,payment,retry,histories,replay/logout passed; Browser T-16 response loss after server commit reconciled one canonical result without a second confirmation | d84d31a6 | Native device lifecycle and uncertain-outcome acceptance remain; browser lost-response reconciliation passed. |
 
 ## Phase 2 — Design system and application shell
 
@@ -72,26 +72,28 @@ Status: **Automated/browser gates passed; native accessibility and hardware acce
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P5-01 | Done | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | Working tree | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
-| P5-02 | Done | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | Working tree | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
-| P5-03 | Needs verification | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | Working tree | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
-| P5-04 | Done | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | Working tree | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
+| P5-01 | Done | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | 60041566 | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
+| P5-02 | Done | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | 60041566 | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
+| P5-03 | Needs verification | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | 60041566 | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
+| P5-04 | Done | 368 frontend tests/33 suites; TypeScript; targeted API/request27tests passed; Backend92tests/6suites passed incl notification expiry/ownership/dedup; Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed; docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved | 60041566 | Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage |
 
 ## Phase 6 — QA, CI and release documentation
 
-Status: **In progress**
+Status: **Local automated, browser and export gates passed; native build/device and remote CI gates pending**
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P6-01 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
-| P6-02 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
-| P6-03 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
-| P6-04 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
-| P6-05 | In progress | Not verified | Working tree | Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable |
+| P6-01 | Done | npm test: backend115/7 suites and frontend368/33 suites; typecheck passed; Real Firebase: all3 scripts;9 payment scenarios including cross-request operation-key race; npm run test:browser: all5 runs passed including response loss, offline, privacy and keyboard states | Working tree | Retain regression gates; remote CI result pending |
+| P6-02 | Done | npm run check: ESLint, source self-test,157 source files/14 configs0 findings, dependency adapters/compatibility passed; 30Oct audits: root0; backend14 and frontend19 moderate/low; no high/critical findings; DEPENDENCY_AUDIT.md records lock hashes, source review, residual reachability and maintenance | Working tree | Track remaining moderate/low dependency findings and supported upgrades |
+| P6-03 | Blocked | Browser: compact/wide, normal/reduced motion and200% CSS zoom; native is not implied; 31Oct native preflight exit2: licensed SDK components absent; Java/patch checks pass | Working tree | Authorized SDK license review/provisioning plus Android physical device and emulator; iOS where available |
+| P6-04 | Done | README,SETUP,API,architecture,feature inventory,screenshot gallery,security/test matrix and RELEASE_NOTES_2_0.md updated | Working tree | Keep final build and remote CI references current |
+| P6-05 | Needs verification | Version2.0.0-demo.0; app2.0.0; all-platform Metro export passed; Versioned export packaging helper/manifest and guarded Android/EAS build configuration prepared; Placeholder API exports are not APKs or configured deployments | Working tree | Package verified export; complete licensed Android build and installed-device checks |
 
 ## Current limitations
 
-- Physical Android/iOS device validation has not run.
-- GitHub open PR query returned HTTP 403; HTTPS Git read access works.
-- No real provider credentials or production data will be used.
-- Android CLI installed and verified; SDK platform/build tools require SDK license acceptance. No physical device or KVM is available.
+- Native Android physical-device/emulator and iOS acceptance have not run.
+- Licensed Android SDK components, a device-reachable demo API and suitable devices are required for native completion.
+- Remote CI status must be checked after pushing; local passed gates do not imply remote success.
+- Moderate/low dependency findings remain; the30Oct full audits have no high/critical matches.
+- No real provider credentials, production data, live money or paid SMS are used.
+- Saved cloud startup draft still requires review/save/publish; saving does not validate a fresh environment.

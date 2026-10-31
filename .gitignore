@@ -9,6 +9,7 @@ backend/.env.*
 !backend/.env.example
 .expo/
 dist/
+dist-native/
 .vscode/
 .idea/
 .DS_Store

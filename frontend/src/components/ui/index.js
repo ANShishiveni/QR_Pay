@@ -46,7 +46,7 @@ export function AppHeader({ title, subtitle, kicker, onBack, right, style }) {
   return <View style={[styles.header, style]}>
     <View style={styles.headerTop}>
       {onBack ? <IconButton name="arrow-back" label="Go back" onPress={onBack} /> : null}
-      <View style={styles.flex}>
+      <View style={styles.headerTitle}>
         {kicker ? <AppText variant="kicker" color={colors.primary} style={styles.kicker}>{kicker.toUpperCase()}</AppText> : null}
         <AppText variant="h1" accessibilityRole="header">{title}</AppText>
       </View>
@@ -317,7 +317,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1 }, screenContent: { flexGrow: 1, width: '100%', maxWidth: 980, alignSelf: 'center' }, screenPadding: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32 },
   flex: { flex: 1, minWidth: 0 }, inline: { flexDirection: 'row', alignItems: 'center', gap: 7 }, rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 }, brandIcon: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }, version: { borderWidth: 1, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1 },
-  header: { marginBottom: 24 }, headerTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, kicker: { marginBottom: 7 }, subtitle: { marginTop: 8 }, iconButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  header: { marginBottom: 24 }, headerTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
+  headerTitle: { flexGrow: 1, flexShrink: 1, flexBasis: 220, minWidth: 0, maxWidth: '100%' },
+  kicker: { marginBottom: 7 }, subtitle: { marginTop: 8 }, iconButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   button: { minHeight: 52, paddingHorizontal: 18, paddingVertical: 13, borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }, buttonText: { textAlign: 'center', flexShrink: 1 },
   field: { width: '100%' }, fieldLabel: { marginBottom: 8 }, inputFrame: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, minHeight: 54 }, input: { flex: 1, minWidth: 0, minHeight: 52, paddingHorizontal: 15, paddingVertical: 13, fontSize: 16, lineHeight: 23 }, fieldHint: { marginTop: 6 },
   feedback: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, borderRadius: 12 }, card: { borderWidth: 1, borderRadius: 18, padding: 20 }, badge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 5, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8 },

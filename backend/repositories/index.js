@@ -3,7 +3,7 @@ const forbiddenKeys = new Set(['__proto__', 'prototype', 'constructor']);
 
 function segments(path = '') {
   const keys = path.split('/').filter(Boolean);
-  if (keys.some(key => forbiddenKeys.has(key) || /[.#$\[\]]/.test(key))) {
+  if (keys.some(key => forbiddenKeys.has(key) || /[.#$[\]]/.test(key))) {
     throw new Error('Invalid repository path');
   }
   return keys;

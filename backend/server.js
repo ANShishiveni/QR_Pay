@@ -21,7 +21,7 @@ function runtimeConfig(env = process.env) {
   return {
     nodeEnv, demoMode, otpProvider, jwtSecret, qrSecret: env.QR_SIGNING_SECRET || jwtSecret,
     jwtIssuer: 'nampay-api', jwtAudience: 'nampay-client', jwtTtlSeconds: 3600,
-    allowedOrigins: (env.ALLOWED_ORIGINS || 'http://localhost:19006,http://127.0.0.1:19006').split(',').map(value => value.trim()),
+    allowedOrigins: (env.ALLOWED_ORIGINS || 'http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006,http://127.0.0.1:19006').split(',').map(value => value.trim()),
     authLimit: 20, requestLimit: 300, now: () => Date.now(),
     trustProxy: env.TRUST_PROXY === '1' ? 1 : false,
     otpOutboxDir: env.OTP_OUTBOX_DIR, authOutboxDir: env.AUTH_OUTBOX_DIR || env.OTP_OUTBOX_DIR,

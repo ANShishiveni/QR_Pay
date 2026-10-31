@@ -1,110 +1,85 @@
-# QR Money Transfer Application
+# NamPay 2.0 — simulated QR payments
 
-This repository contains a full-stack mobile payment prototype designed to enable seamless money transfers between users across different banking institutions. Built to bridge financial gaps, the application modernizes transactions through a simple request-and-scan workflow.
+NamPay is a sandbox prototype for requesting and approving **simulated** NAD
+payments. It moves no real money, connects to no bank or payment processor, and
+collects no real card numbers or security codes. Receipts are demonstration
+records, not proof of bank settlement.
 
-​A recipient initiates a transaction by inputting a requested amount to generate a dynamic, single-use QR code. The sender then scans the QR code with their device and securely authorizes the transfer using a linked Visa card and Multi-Factor Authentication (OTP).
+A requester creates a five-minute QR. A different account scans it or imports
+its image, reviews the server amount and recipient, chooses a predefined test
+instrument, and enters a server-generated verification code. One atomic commit
+records the simulation for both accounts. A lost response is reconciled before
+the app reports a result.
 
-## Features
+## Run locally
 
-- User registration and authentication
-- Visa card linking with tokenization
-- QR code generation and scanning
-- Cross-bank money transfers
-- Transaction history
-- End-to-end encryption
-- PCI DSS compliance simulation
+Use Node 24 and npm 11; Java 21 is needed for Firebase emulators. From the repository
+root:
 
-## Tech Stack
-
-- **Frontend**: React Native with Expo
-- **Backend**: Node.js with Express.js
-- **Database**: Firebase Realtime Database
-- **Authentication**: Firebase Auth
-- **Payments**: Stripe API (sandbox)
-- **QR Codes**: ZXing library
-
-## Setup Instructions
-
-### 1. API Keys Setup
-
-#### Firebase Setup
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project named "qr-money-transfer"
-3. Enable Authentication (Email/Password)
-4. Enable Realtime Database
-5. Get your Firebase config from Project Settings > General > Your apps
-6. Add the config to `frontend/config/firebase.js`
-
-#### Stripe Setup
-1. Go to [Stripe Dashboard](https://dashboard.stripe.com/)
-2. Create a new account or sign in
-3. Go to Developers > API keys
-4. Copy your Publishable key and Secret key (use test keys)
-5. Add them to your environment variables
-
-### 2. Installation
-
-```bash
-# Install all dependencies
-npm run install-all
-
-# Start backend server
-npm run dev
-
-# Start frontend (in another terminal)
-npm run client
+```sh
+npm ci
+npm --prefix backend ci
+npm --prefix frontend ci --legacy-peer-deps
 ```
 
-### 3. Environment Variables
+Start the disposable memory API:
 
-Create a `.env` file in the backend directory:
-
-```
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_PRIVATE_KEY=your-private-key
-FIREBASE_CLIENT_EMAIL=your-client-email
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
-JWT_SECRET=your-jwt-secret
+```sh
+NODE_ENV=development DEMO_MODE=true DATABASE_MODE=memory OTP_PROVIDER=mock \
+  OTP_OUTBOX_DIR="$(pwd)/.local/outbox" npm --prefix backend start
 ```
 
-For the frontend, configure the API host via environment for web builds:
+In another terminal:
 
-```
-EXPO_PUBLIC_API_URL=http://localhost:3000
-```
-
-The frontend will use `${EXPO_PUBLIC_API_URL}/api` automatically. For native builds, you can set `extra.apiUrl` in `app.json` and the app will use it:
-
-```
-{
-  "expo": {
-    "extra": {
-      "apiUrl": "http://your-machine-ip:3000"
-    }
-  }
-}
+```sh
+EXPO_PUBLIC_API_URL=http://localhost:3000 npm --prefix frontend run web -- --localhost
 ```
 
-Security note: Secrets must not be committed to source control. Private key logging has been removed from the backend to avoid leaking sensitive material.
+Open **http://localhost:8081**. Use localhost consistently for browser cookies.
+Register synthetic accounts; there are no public/default credentials. Mock OTP
+and recovery messages go to the private local outbox, never a public endpoint.
+Restarting the memory API clears its data and invalidates its sessions/QRs.
+See [setup](docs/SETUP.md) for private delivery, native hosts and Firebase.
 
-## Project Structure
+## Included
 
+- Light/dark/system appearance, onboarding and protected four-tab navigation.
+- Verified sessions, logout, local mock password recovery and password changes.
+- Request creation, expiry, list, cancellation, sharing and new-request regeneration.
+- Camera/gallery QR validation, authoritative review, bound OTP and exact retry.
+- Server totals, predefined cards, activity filters/pagination and simulated receipts.
+- Profile names/photo preview, appearance/security preferences and in-app inbox.
+- Offline draft protection, foreground reconciliation, keyboard and ARIA fixes.
+
+The [feature inventory](docs/implementation/FEATURE_INVENTORY.md) describes each
+flow and unavailable capabilities. The [screenshot gallery](docs/design/SCREENSHOTS.md)
+records browser evidence. [Architecture](docs/architecture/ARCHITECTURE.md) and
+[API contracts](docs/api/CONTRACT.md) explain ownership and retained legacy data.
+
+## Verify
+
+```sh
+npm run check
+npm test
+npm run typecheck
+npm run emulators:install
+npm run test:emulators
+npm run test:browser
 ```
-qr-money-transfer/
-├── frontend/          # React Native app
-├── backend/           # Node.js server
-├── docs/             # Documentation
-└── README.md
-```
 
-## Testing
+The browser runner starts its own disposable API and Metro server; ports 3000 and
+8081 must be free. Chromium is required. Emulator checks use only `demo-nampay`
+on loopback. See [test matrix](docs/testing/TEST_MATRIX.md) for exact evidence and
+[security decisions](docs/security/SECURITY_DECISIONS.md) for restrictions.
 
-The application uses sandbox APIs for testing:
-- Stripe test cards for payment simulation
-- Firebase emulator for local development
-- Mock bank IDs for cross-bank transfers
+## Release status
 
-## License
+This branch is a demonstration candidate, **not approved for production**.
+Native install/device, SecureStore lifecycle, camera/share, biometrics and
+TalkBack/VoiceOver checks remain outstanding. Browser zoom testing does not
+establish native font-scaling acceptance. See [native acceptance](docs/testing/NATIVE_ACCEPTANCE.md),
+[dependency audit](docs/security/DEPENDENCY_AUDIT.md), and the live
+[progress tracker](docs/implementation/PROGRESS.md). No real-provider credentials
+or production data are needed for the automated checks.
 
-MIT
+License: MIT.

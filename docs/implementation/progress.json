@@ -3,7 +3,7 @@
   "blueprint": "BLUEPRINT.md",
   "branch": "feat/nampay-2",
   "baselineCommit": "998d2ec571289edbf777a52d9edea50652cf257b",
-  "updatedAt": "2026-10-28T22:45:33.020670+00:00",
+  "updatedAt": "2026-10-31T06:42:18.154444+00:00",
   "phases": [
     {
       "phase": 0,
@@ -139,7 +139,7 @@
             "Browser T-16 response loss after server commit reconciled one canonical result without a second confirmation"
           ],
           "commit": "d84d31a6",
-          "nextAction": "Complete browser uncertain-outcome and native device cases in later phases"
+          "nextAction": "Native device lifecycle and uncertain-outcome acceptance remain; browser lost-response reconciliation passed."
         }
       ]
     },
@@ -321,7 +321,7 @@
             "Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed",
             "docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved"
           ],
-          "commit": null,
+          "commit": "60041566",
           "nextAction": "Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage"
         },
         {
@@ -333,7 +333,7 @@
             "Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed",
             "docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved"
           ],
-          "commit": null,
+          "commit": "60041566",
           "nextAction": "Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage"
         },
         {
@@ -345,7 +345,7 @@
             "Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed",
             "docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved"
           ],
-          "commit": null,
+          "commit": "60041566",
           "nextAction": "Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage"
         },
         {
@@ -357,7 +357,7 @@
             "Browser features, two-account lost-confirm response, offline draft/no replay, muted inbox, keyboard/dialog, normal/reduced motion and200% browser zoom passed",
             "docs/testing/RELIABILITY.md and ACCESSIBILITY.md; screenshots saved"
           ],
-          "commit": null,
+          "commit": "60041566",
           "nextAction": "Native accessibility/biometric/device acceptance remains unavailable; retain regression coverage"
         }
       ]
@@ -365,50 +365,69 @@
     {
       "phase": 6,
       "title": "QA, CI and release documentation",
-      "status": "In progress",
+      "status": "Local automated, browser and export gates passed; native build/device and remote CI gates pending",
       "tasks": [
         {
           "id": "P6-01",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "npm test: backend115/7 suites and frontend368/33 suites; typecheck passed",
+            "Real Firebase: all3 scripts;9 payment scenarios including cross-request operation-key race",
+            "npm run test:browser: all5 runs passed including response loss, offline, privacy and keyboard states"
+          ],
           "commit": null,
-          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
+          "nextAction": "Retain regression gates; remote CI result pending"
         },
         {
           "id": "P6-02",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "npm run check: ESLint, source self-test,157 source files/14 configs0 findings, dependency adapters/compatibility passed",
+            "30Oct audits: root0; backend14 and frontend19 moderate/low; no high/critical findings",
+            "DEPENDENCY_AUDIT.md records lock hashes, source review, residual reachability and maintenance"
+          ],
           "commit": null,
-          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
+          "nextAction": "Track remaining moderate/low dependency findings and supported upgrades"
         },
         {
           "id": "P6-03",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Blocked",
+          "evidence": [
+            "Browser: compact/wide, normal/reduced motion and200% CSS zoom; native is not implied",
+            "31Oct native preflight exit2: licensed SDK components absent; Java/patch checks pass"
+          ],
           "commit": null,
-          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
+          "nextAction": "Authorized SDK license review/provisioning plus Android physical device and emulator; iOS where available"
         },
         {
           "id": "P6-04",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Done",
+          "evidence": [
+            "README,SETUP,API,architecture,feature inventory,screenshot gallery,security/test matrix and RELEASE_NOTES_2_0.md updated"
+          ],
           "commit": null,
-          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
+          "nextAction": "Keep final build and remote CI references current"
         },
         {
           "id": "P6-05",
-          "status": "In progress",
-          "evidence": [],
+          "status": "Needs verification",
+          "evidence": [
+            "Version2.0.0-demo.0; app2.0.0; all-platform Metro export passed",
+            "Versioned export packaging helper/manifest and guarded Android/EAS build configuration prepared",
+            "Placeholder API exports are not APKs or configured deployments"
+          ],
           "commit": null,
-          "nextAction": "Dependency remediation, CI/static checks, documentation and versioned demo artifacts; device gate remains unavailable"
+          "nextAction": "Package verified export; complete licensed Android build and installed-device checks"
         }
       ]
     }
   ],
   "limitations": [
-    "Physical Android/iOS device validation has not run.",
-    "GitHub open PR query returned HTTP 403; HTTPS Git read access works.",
-    "No real provider credentials or production data will be used.",
-    "Android CLI installed and verified; SDK platform/build tools require SDK license acceptance. No physical device or KVM is available."
+    "Native Android physical-device/emulator and iOS acceptance have not run.",
+    "Licensed Android SDK components, a device-reachable demo API and suitable devices are required for native completion.",
+    "Remote CI status must be checked after pushing; local passed gates do not imply remote success.",
+    "Moderate/low dependency findings remain; the30Oct full audits have no high/critical matches.",
+    "No real provider credentials, production data, live money or paid SMS are used.",
+    "Saved cloud startup draft still requires review/save/publish; saving does not validate a fresh environment."
   ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "qr-money-transfer",
-  "version": "1.0.0",
-  "description": "NamPay 2.0 — a simulated QR-payment prototype",
+  "version": "2.0.0-demo.0",
+  "description": "NamPay 2.0 \u2014 a simulated QR-payment prototype",
   "main": "index.js",
   "scripts": {
     "start": "npm --prefix backend start",
@@ -15,7 +15,10 @@
     "typecheck": "npm --prefix frontend run typecheck",
     "emulators:install": "bash scripts/install-emulators.sh",
     "emulators": "bash scripts/emulators.sh",
-    "test:emulators": "bash scripts/emulators.sh exec \"node scripts/emulator-smoke.cjs\""
+    "test:emulators": "bash scripts/emulators.sh exec 'node scripts/emulator-smoke.cjs && node scripts/emulator-payment-smoke.cjs && node scripts/emulator-server-smoke.cjs'",
+    "lint": "eslint .",
+    "check": "npm run lint && node scripts/check-source.cjs --self-test && node scripts/check-source.cjs && node scripts/patch-dependencies.cjs --check && node scripts/tooling-compat-smoke.cjs",
+    "test:browser": "bash scripts/ci-browser.sh"
   },
   "keywords": [
     "qr",
@@ -28,6 +31,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
     "playwright": "1.56.1"
   }
 }

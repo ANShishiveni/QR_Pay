@@ -200,4 +200,30 @@ describe('password recovery proof', () => {
     await request(app).post('/api/auth/reset-password').send({ token, newPassword: 'Expired proof passphrase!' }).expect(400);
     await request(app).post('/api/auth/login').send(profile()).expect(200);
   });
+  it('invalidates undeliverable recovery proof without exposing delivery failure or changing credentials', async () => {
+    const blockedPath = path.join(outbox, 'not-a-directory');
+    await fs.writeFile(blockedPath, 'synthetic fixture');
+    const { app, repository } = context({ config: { authOutboxDir: blockedPath } });
+    const account = await register(app);
+    const absent = await request(app).post('/api/auth/forgot-password').send({ email: 'absent-delivery@example.test' }).expect(202);
+    const failed = await request(app).post('/api/auth/forgot-password').send({ email: profile().email }).expect(202);
+    expect(failed.body).toEqual(absent.body);
+    expect(Object.keys((await repository.read('passwordResets')) || {})).toHaveLength(0);
+    await request(app).get('/api/auth/verify').set('Authorization', bearer(account.token)).expect(200);
+    await request(app).post('/api/auth/login').send(profile()).expect(200);
+  });
+  it('throttles recovery and reset attempts on a shared IP before accepting further proofs', async () => {
+    const { app } = context({ config: { authLimit: 2, authOutboxDir: outbox } });
+    app.set('trust proxy', 1);
+    const ip = '192.0.2.141';
+    await request(app).post('/api/auth/forgot-password').set('X-Forwarded-For', ip).send({ email: 'recovery-one@example.test' }).expect(202);
+    await request(app).post('/api/auth/forgot-password').set('X-Forwarded-For', ip).send({ email: 'recovery-two@example.test' }).expect(202);
+    for (const route of ['forgot-password', 'reset-password']) {
+      const response = await request(app).post(`/api/auth/${route}`).set('X-Forwarded-For', ip)
+        .send({ email: 'recovery-three@example.test', token: '0'.repeat(64), newPassword: 'Synthetic recovered passphrase!' }).expect(429);
+      expect(response.body.code).toBe('AUTH_RATE_LIMITED');
+    }
+    await request(app).post('/api/auth/forgot-password').set('X-Forwarded-For', '192.0.2.142').send({ email: 'separate@example.test' }).expect(202);
+    expect(await fs.readdir(outbox)).toHaveLength(0);
+  });
 });

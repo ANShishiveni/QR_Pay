@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "NamPay",
+    "name": "NamPay Demo",
     "slug": "nampay",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
@@ -10,7 +10,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nampay.app"
+      "bundleIdentifier": "com.nampay.app",
+      "buildNumber": "2"
     },
     "android": {
       "package": "com.nampay.app",
@@ -21,10 +22,11 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "versionCode": 2
     },
     "web": {
-      "bundler": "webpack"
+      "bundler": "metro"
     },
     "plugins": [
       [
@@ -34,7 +36,21 @@
           "recordAudioAndroid": false
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a profile photo or QR image for this NamPay demonstration.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Use Face ID for optional local confirmation before server verification."
+        }
+      ]
     ]
   }
 }
