@@ -79,21 +79,21 @@ Status: **Automated/browser gates passed; native accessibility and hardware acce
 
 ## Phase 6 — QA, CI and release documentation
 
-Status: **Local automated, browser and export gates passed; native build/device and remote CI gates pending**
+Status: **Local automated, browser and export gates passed; native build/device acceptance pending; consult PR for remote CI**
 
 | Task | Status | Evidence | Commit / PR | Next action |
 | --- | --- | --- | --- | --- |
-| P6-01 | Done | npm test: backend115/7 suites and frontend368/33 suites; typecheck passed; Real Firebase: all3 scripts;9 payment scenarios including cross-request operation-key race; npm run test:browser: all5 runs passed including response loss, offline, privacy and keyboard states | Working tree | Retain regression gates; remote CI result pending |
-| P6-02 | Done | npm run check: ESLint, source self-test,157 source files/14 configs0 findings, dependency adapters/compatibility passed; 30Oct audits: root0; backend14 and frontend19 moderate/low; no high/critical findings; DEPENDENCY_AUDIT.md records lock hashes, source review, residual reachability and maintenance | Working tree | Track remaining moderate/low dependency findings and supported upgrades |
-| P6-03 | Blocked | Browser: compact/wide, normal/reduced motion and200% CSS zoom; native is not implied; 31Oct native preflight exit2: licensed SDK components absent; Java/patch checks pass | Working tree | Authorized SDK license review/provisioning plus Android physical device and emulator; iOS where available |
-| P6-04 | Done | README,SETUP,API,architecture,feature inventory,screenshot gallery,security/test matrix and RELEASE_NOTES_2_0.md updated | Working tree | Keep final build and remote CI references current |
-| P6-05 | Needs verification | Version2.0.0-demo.0; app2.0.0; all-platform Metro export passed; Versioned export packaging helper/manifest and guarded Android/EAS build configuration prepared; Placeholder API exports are not APKs or configured deployments | Working tree | Package verified export; complete licensed Android build and installed-device checks |
+| P6-01 | Done | npm test: backend115/7 suites and frontend368/33 suites; typecheck passed; Real Firebase: all3 scripts;9 payment scenarios including cross-request operation-key race; npm run test:browser: all5 runs passed including response loss, offline, privacy and keyboard states | 6cc1f70c | Retain regression gates; consult the pull request checks for live remote CI status |
+| P6-02 | Done | npm run check: ESLint, source self-test,157 source files/14 configs0 findings, dependency adapters/compatibility passed; 30Oct audits: root0; backend14 and frontend19 moderate/low; no high/critical findings; DEPENDENCY_AUDIT.md records lock hashes, source review, residual reachability and maintenance | 6cc1f70c | Track remaining moderate/low dependency findings and supported upgrades |
+| P6-03 | Blocked | Browser: compact/wide, normal/reduced motion and200% CSS zoom; native is not implied; 31Oct native preflight exit2: licensed SDK components absent; Java/patch checks pass | 6cc1f70c | Authorized SDK license review/provisioning plus Android physical device and emulator; iOS where available |
+| P6-04 | Done | README,SETUP,API,architecture,feature inventory,screenshot gallery,security/test matrix and RELEASE_NOTES_2_0.md updated | 6cc1f70c | Keep final build and remote CI references current |
+| P6-05 | Needs verification | Version2.0.0-demo.0; app2.0.0; all-platform Metro export passed; Versioned export packaging helper/manifest and guarded Android/EAS build configuration prepared; Placeholder API exports are not APKs or configured deployments | 6cc1f70c | Complete licensed Android build and installed-device checks; versioned export evidence remains separate |
 
 ## Current limitations
 
 - Native Android physical-device/emulator and iOS acceptance have not run.
 - Licensed Android SDK components, a device-reachable demo API and suitable devices are required for native completion.
-- Remote CI status must be checked after pushing; local passed gates do not imply remote success.
+- Remote CI is separate from local verification; consult the pull request checks for live status.
 - Moderate/low dependency findings remain; the30Oct full audits have no high/critical matches.
 - No real provider credentials, production data, live money or paid SMS are used.
 - Saved cloud startup draft still requires review/save/publish; saving does not validate a fresh environment.

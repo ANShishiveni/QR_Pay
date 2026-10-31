@@ -68,6 +68,12 @@ commit and reconciles without a second confirmation. Recovery failure/throttling
 private logs, malformed QR bounds and cross-account limits have explicit tests.
 Full scope and remaining layer-specific gaps are in the [test matrix](../testing/TEST_MATRIX.md).
 
+On 31 October the settings heading was shortened to “Device check” to avoid
+splitting its final letter at 200% CSS zoom. Its accessible label and full
+verification explanation are unchanged. The existing 14 settings tests, all
+five browser runs and the three-platform exports passed after this adjustment;
+the refreshed capture was reviewed separately from native font scaling.
+
 Local logs are in ignored `.local/evidence/`; regenerate them in a fresh checkout.
 The GitHub workflow defines frozen installs, static/audit gates, unit/type checks,
 real emulators, exports and browser journeys. Remote CI status must be verified

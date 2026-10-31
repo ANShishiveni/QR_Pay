@@ -1,6 +1,6 @@
 # NamPay frontend
 
-Expo53, React19.0.0 and React Native0.79.5; Metro builds both web and native.
+Expo 53, React 19.0.0 and React Native 0.79.6; Metro builds both web and native.
 Install with `npm ci --legacy-peer-deps` from this directory. The postinstall
 hook applies a hash-checked Metro adaptation for the patched image-size API.
 Keep the repository's sibling `scripts/` directory when installing/building.

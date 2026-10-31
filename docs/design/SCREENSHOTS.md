@@ -11,13 +11,14 @@ shared full-page capture helper. The browser scripts use disposable local demo
 accounts and exclude passwords, recovery proofs and verification codes from
 captures.
 
-The 20 current captures were regenerated on **30 October 2026**, after the Metro
-web-root sizing fix and wrapping header/settings layouts. The complete
+The 20 current captures were regenerated on **31 October 2026**, after the Metro
+web-root sizing fix, wrapping header/settings layouts and shorter “Device check”
+heading. The complete
 [`ci-browser.sh`](../../scripts/ci-browser.sh) run passed all five checks: auth,
 payments, features, and reliability with reduced and normal motion. The final
 normal-motion run supplied the reliability images. These functional/layout
-checks do not establish readability in every captured state; see the remaining
-zoom issue below. The two historical baseline images were retained separately.
+checks do not establish readability on every screen at enlarged text; see the
+coverage limits below. The two historical baseline images were retained separately.
 
 ## Onboarding and authentication
 
@@ -73,7 +74,7 @@ the assertions behind these images.
 | [Confirmation dialog](screenshots/confirmation-light-compact.png) | Light, compact | 390 × 844 | Sign-out confirmation used for browser keyboard/focus checks. |
 | [Inbox](screenshots/notifications-light-compact.png) | Light, compact | 390 × 844 | An owned request event after server-confirmed read acknowledgement. |
 | [Profile, wide](screenshots/profile-light-wide.png) | Light, wide | 1280 × 900 | Profile navigation with alerts muted and history preserved. |
-| [Settings at 200% CSS zoom](screenshots/settings-browser-zoom-200.png) | Light, compact viewport | 390 × 3918 | Stacked back/title and heading/switch layouts after `document.body.style.zoom = '2'`; “confirmation” still splits before its final letter. |
+| [Settings at 200% CSS zoom](screenshots/settings-browser-zoom-200.png) | Light, compact viewport | 390 × 3862 | Stacked back/title and heading/switch layouts after `document.body.style.zoom = '2'`; Settings, In-app alerts and Device check headings retain whole words. |
 
 ## Historical baseline
 
@@ -96,11 +97,11 @@ current browser scripts above.
   SecureStore restart, biometrics and native share sheets remain separate
   device checks.
 - The 200% image is **CSS zoom in Chromium**, not native font scaling or a
-  TalkBack/VoiceOver test. The Settings title fits, and the In-app alerts heading
-  and switch now stack without splitting words. The Device confirmation switch
-  also stacks, but the long word “confirmation” still leaves its final “n” on a
-  separate line. The no-horizontal-overflow check passed; this remaining
-  readability issue and every screen at enlarged text still need review.
+  TalkBack/VoiceOver test. Direct inspection confirms that the Settings title
+  fits and the In-app alerts and Device check headings stack above their switches
+  without splitting words. The no-horizontal-overflow check passed. This fixes
+  the earlier isolated final-letter wrap; every screen at enlarged text and full
+  manual accessibility coverage still need review.
 - A static image cannot establish focus order, announcements, contrast in every
   composition, reduced-motion behavior or touch-target usability. Use the
   executed script evidence and the [test matrix](../testing/TEST_MATRIX.md)
