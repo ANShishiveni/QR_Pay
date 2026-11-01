@@ -1,368 +1,108 @@
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
-const QRCode = require('qrcode');
 const crypto = require('crypto');
-const { getFirebaseServices } = require('../config/firebase');
-const jwt = require('jsonwebtoken');
-const { verifyOTPSession } = require('../middleware/otpAuth');
+const QRCode = require('qrcode');
+const { verifyToken } = require('../middleware/auth');
+const { amountFromBody, textField, httpError, route, requireId } = require('../utils/paymentValidation');
+const {
+  getUser, userName, requesterUid, publicRequest, activeRequest, expireRequests, addNotification,
+  publicCard, publicTransaction,
+} = require('../services/paymentState');
+const { isUsableTestCard } = require('../utils/cardValidation');
+const { secureQrData, validateQrData } = require('../services/qrSignature');
+const { confirmPayment } = require('../services/paymentService');
 
 const router = express.Router();
-
-// Generate secure QR code data with minimal exposure
-const generateSecureQRData = (paymentRequest) => {
-  // Create a secure token that contains minimal information
-  const secureData = {
-    type: 'payment_request',
-    token: paymentRequest.id, // Only include the request ID as a token
-    expiresAt: paymentRequest.expiresAt
+router.use(verifyToken);
+router.post('/generate', route(async (req, res) => {
+  const { repository, config } = req.app.locals;
+  const now = config.now();
+  const amountMinor = amountFromBody(req.body);
+  if (req.body.currency !== undefined && req.body.currency !== 'NAD') throw httpError(400, 'UNSUPPORTED_CURRENCY', 'Only NAD is supported');
+  const ttl = req.body.expiresIn === undefined ? 300 : req.body.expiresIn;
+  if (!Number.isInteger(ttl) || ttl < 60 || ttl > 300) throw httpError(400, 'INVALID_EXPIRY', 'Request expiry must be between 60 and 300 seconds');
+  const paymentRequest = {
+    id: crypto.randomUUID(), requesterUid: req.user.uid, requesterName: userName(req.user),
+    amountMinor, currency: 'NAD', reference: textField(req.body.reference, 'Reference', 80),
+    description: textField(req.body.description, 'Description', 160), status: 'pending',
+    createdAt: new Date(now).toISOString(), expiresAt: new Date(now + ttl * 1000).toISOString(), version: 2,
   };
-  
-  // Create a signature to verify data integrity
-  const signature = crypto
-    .createHmac('sha256', process.env.JWT_SECRET)
-    .update(JSON.stringify(secureData))
-    .digest('hex');
-  
-  return {
-    ...secureData,
-    signature: signature
-  };
-};
-
-// Middleware to verify JWT token
-const verifyToken = async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
-// Generate QR code for payment request
-router.post('/generate', verifyToken, async (req, res) => {
-  try {
-    const { amount, description, reference, expiresIn = 300 } = req.body; // expiresIn in seconds, default 5 minutes
-    const { realtimeDb } = getFirebaseServices();
-
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ error: 'Valid amount is required' });
-    }
-
-    const paymentAmount = parseFloat(amount);
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-
-    // Create payment request data
-    const paymentRequest = {
-      id: uuidv4(),
-      senderId: req.user.uid,
-      senderEmail: req.user.email,
-      senderName: `${req.user.firstName} ${req.user.lastName}`,
-      amount: paymentAmount,
-      currency: 'NAD',
-      description: description || 'QR Payment Request',
-      reference: reference || '',
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      expiresAt: expiresAt
-    };
-
-    // Store payment request in Firebase
-    await realtimeDb.ref(`paymentRequests/${paymentRequest.id}`).set(paymentRequest);
-
-    // Create secure QR code data (minimal information exposure)
-    const secureQRData = generateSecureQRData(paymentRequest);
-
-    // Generate QR code
-    const qrCodeDataURL = await QRCode.toDataURL(JSON.stringify(secureQRData), {
-      width: 300,
-      margin: 2,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      }
-    });
-
-    res.json({
-      message: 'QR code generated successfully',
-      qrCode: qrCodeDataURL,
-      paymentRequest: {
-        id: paymentRequest.id,
-        amount: paymentAmount,
-        currency: 'NAD',
-        description: paymentRequest.description,
-        expiresAt: expiresAt,
-        status: 'pending'
-      }
-    });
-
-  } catch (error) {
-    console.error('Generate QR code error:', error);
-    res.status(500).json({ error: 'Failed to generate QR code', details: error.message });
-  }
+  const qrData = JSON.stringify(secureQrData(paymentRequest, config));
+  const qrCode = await QRCode.toDataURL(qrData, { width: 360, margin: 3, errorCorrectionLevel: 'M', color: { dark: '#11263D', light: '#FFFFFF' } });
+  await repository.transaction(root => {
+    if (!getUser(root, req.user.uid)) throw httpError(404, 'USER_NOT_FOUND', 'Account was not found');
+    root.paymentRequests ||= {};
+    root.paymentRequests[paymentRequest.id] = paymentRequest;
+    addNotification(root, req.user.uid, 'request_created', paymentRequest, now);
+    return root;
+  });
+  res.status(201).json({ message: 'Demo payment request created', qrCode, qrData, paymentRequest: publicRequest(paymentRequest, now), serverTime: new Date(now).toISOString() });
+}));
+router.post('/scan', route(async (req, res) => {
+  const { repository, config } = req.app.locals;
+  const now = config.now();
+  const data = validateQrData(req.body.qrData, config);
+  const result = await repository.transaction(root => {
+    const request = activeRequest(root, data.token, now, { payerUid: req.user.uid });
+    if (request.expiresAt !== data.expiresAt) throw httpError(400, 'INVALID_QR', 'The QR code does not match this request');
+    root.requestAccess ||= {};
+    root.requestAccess[request.id] ||= {};
+    root.requestAccess[request.id][req.user.uid] = { expiresAt: request.expiresAt, scannedAt: new Date(now).toISOString() };
+    return root;
+  });
+  const cards = Object.entries(getUser(result.snapshot, req.user.uid)?.cards || {})
+    .filter(([, card]) => isUsableTestCard(card, now)).map(([id, card]) => publicCard(card, id));
+  res.json({ paymentRequest: publicRequest(result.snapshot.paymentRequests[data.token], now), cards,
+    receiverCard: cards.find(card => card.isDefault) || cards[0] || null, serverTime: new Date(now).toISOString() });
+}));
+router.post('/confirm-payment', route(async (req, res) => {
+  res.json(await confirmPayment({ ...req.app.locals, uid: req.user.uid, body: req.body, idempotencyHeader: req.get('Idempotency-Key') }));
+}));
+const listRequests = route(async (req, res) => {
+  const { repository, config } = req.app.locals;
+  const now = config.now();
+  const result = await repository.transaction(root => expireRequests(root, req.user.uid, now));
+  const requests = Object.values(result.snapshot.paymentRequests || {})
+    .filter(request => requesterUid(request) === req.user.uid)
+    .map(request => publicRequest(request, now))
+    .filter(request => !req.query.status || req.query.status === 'all' || request.status === req.query.status)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  res.json({ requests, serverTime: new Date(now).toISOString() });
 });
-
-// Scan and process QR code
-router.post('/scan', verifyToken, async (req, res) => {
-  try {
-    const { qrData } = req.body;
-    const { realtimeDb } = getFirebaseServices();
-
-    if (!qrData) {
-      return res.status(400).json({ error: 'QR code data is required' });
-    }
-
-    let parsedData;
-    try {
-      parsedData = JSON.parse(qrData);
-    } catch (parseError) {
-      return res.status(400).json({ error: 'Invalid QR code format' });
-    }
-
-    if (parsedData.type !== 'payment_request') {
-      return res.status(400).json({ error: 'Invalid QR code type' });
-    }
-
-    // Verify the signature to ensure data integrity
-    const { signature, ...dataToVerify } = parsedData;
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.JWT_SECRET)
-      .update(JSON.stringify(dataToVerify))
-      .digest('hex');
-    
-    if (signature !== expectedSignature) {
-      return res.status(400).json({ error: 'Invalid QR code signature' });
-    }
-
-    // Check if payment request exists and is valid
-    const requestSnapshot = await realtimeDb.ref(`paymentRequests/${parsedData.token}`).once('value');
-    const paymentRequest = requestSnapshot.val();
-
-    if (!paymentRequest) {
-      return res.status(404).json({ error: 'Payment request not found' });
-    }
-
-    if (paymentRequest.status !== 'pending') {
-      return res.status(400).json({ error: 'Payment request is no longer valid' });
-    }
-
-    if (new Date(paymentRequest.expiresAt) < new Date()) {
-      return res.status(400).json({ error: 'Payment request has expired' });
-    }
-
-    if (paymentRequest.senderId === req.user.uid) {
-      return res.status(400).json({ error: 'Cannot pay yourself' });
-    }
-
-    // Get receiver's default card
-    const receiverSnapshot = await realtimeDb.ref(`users/${req.user.email.replace('.', '_')}`).once('value');
-    const receiverData = receiverSnapshot.val();
-
-    if (!receiverData) {
-      return res.status(404).json({ error: 'Receiver not found' });
-    }
-
-    const receiverCards = receiverData.cards || {};
-    const defaultCardId = Object.keys(receiverCards).find(id => receiverCards[id].isDefault);
-    
-    if (!defaultCardId) {
-      return res.status(400).json({ error: 'No default card set. Please link a card first.' });
-    }
-
-    res.json({
-      message: 'QR code scanned successfully',
-      paymentRequest: {
-        id: paymentRequest.id,
-        amount: paymentRequest.amount,
-        currency: paymentRequest.currency,
-        senderName: paymentRequest.senderName,
-        description: paymentRequest.description,
-        expiresAt: paymentRequest.expiresAt
-      },
-      receiverCard: {
-        id: defaultCardId,
-        last4: receiverCards[defaultCardId].last4,
-        brand: receiverCards[defaultCardId].brand,
-        bank: receiverCards[defaultCardId].bank
-      }
-    });
-
-  } catch (error) {
-    console.error('Scan QR code error:', error);
-    res.status(500).json({ error: 'Failed to scan QR code', details: error.message });
+router.get('/requests', listRequests);
+router.get('/history', listRequests); // Compatibility alias for the previous stale client route.
+router.get('/requests/:requestId', route(async (req, res) => {
+  const id = requireId(req.params.requestId, 'Request ID');
+  const { repository, config } = req.app.locals;
+  const now = config.now();
+  const root = await repository.read();
+  const request = root.paymentRequests?.[id];
+  if (!request || (requesterUid(request) !== req.user.uid && request.payerUid !== req.user.uid && !root.requestAccess?.[id]?.[req.user.uid])) {
+    throw httpError(404, 'REQUEST_NOT_FOUND', 'Payment request was not found');
   }
-});
-
-// Confirm payment after QR scan
-router.post('/confirm-payment', verifyToken, verifyOTPSession, async (req, res) => {
-  try {
-    const { requestId, receiverCardId } = req.body;
-    const { realtimeDb } = getFirebaseServices();
-
-    if (!requestId || !receiverCardId) {
-      return res.status(400).json({ error: 'Request ID and receiver card ID are required' });
-    }
-
-    // Get payment request
-    const requestSnapshot = await realtimeDb.ref(`paymentRequests/${requestId}`).once('value');
-    const paymentRequest = requestSnapshot.val();
-
-    if (!paymentRequest) {
-      return res.status(404).json({ error: 'Payment request not found' });
-    }
-
-    if (paymentRequest.status !== 'pending') {
-      return res.status(400).json({ error: 'Payment request is no longer valid' });
-    }
-
-    if (new Date(paymentRequest.expiresAt) < new Date()) {
-      return res.status(400).json({ error: 'Payment request has expired' });
-    }
-
-    if (paymentRequest.senderId === req.user.uid) {
-      return res.status(400).json({ error: 'Cannot pay yourself' });
-    }
-
-    // Get receiver's card
-    const receiverCardRef = realtimeDb.ref(`users/${req.user.email.replace('.', '_')}/cards/${receiverCardId}`);
-    const receiverCardSnapshot = await receiverCardRef.once('value');
-    const receiverCardData = receiverCardSnapshot.val();
-
-    if (!receiverCardData) {
-      return res.status(404).json({ error: 'Receiver card not found' });
-    }
-
-    // Get sender's default card
-    const senderSnapshot = await realtimeDb.ref(`users/${paymentRequest.senderEmail.replace('.', '_')}`).once('value');
-    const senderData = senderSnapshot.val();
-
-    if (!senderData) {
-      return res.status(404).json({ error: 'Sender not found' });
-    }
-
-    const senderCards = senderData.cards || {};
-    const senderDefaultCardId = Object.keys(senderCards).find(id => senderCards[id].isDefault);
-    
-    if (!senderDefaultCardId) {
-      return res.status(400).json({ error: 'Sender has no default card set' });
-    }
-
-    const senderCardData = senderCards[senderDefaultCardId];
-
-    // Simulate payment processing
-    // The receiver is paying the sender, so money flows from receiver to sender
-    const { simulateCrossBankTransfer } = require('../config/stripe');
-    const transferResult = await simulateCrossBankTransfer(
-      { number: receiverCardData.paymentMethodId }, // Receiver's card (money source)
-      { number: senderCardData.paymentMethodId },    // Sender's card (money destination)
-      paymentRequest.amount
-    );
-
-    if (!transferResult.success) {
-      return res.status(400).json({ error: 'Payment failed', details: transferResult.error });
-    }
-
-    // Update payment request status
-    await realtimeDb.ref(`paymentRequests/${requestId}`).update({
-      status: 'completed',
-      completedAt: new Date().toISOString(),
-      receiverId: req.user.uid,
-      receiverEmail: req.user.email
-    });
-
-    // Create transaction records
-    const transactionId = uuidv4();
-    const timestamp = new Date().toISOString();
-
-    // Receiver transaction (money going out - paying the sender)
-    const receiverTransaction = {
-      id: transactionId,
-      userId: req.user.uid,
-      type: 'send',
-      amount: paymentRequest.amount,
-      currency: paymentRequest.currency,
-      receiverEmail: paymentRequest.senderEmail,
-      receiverName: paymentRequest.senderName,
-      description: paymentRequest.description,
-      status: 'completed',
-      timestamp: timestamp,
-      senderBank: transferResult.senderBank,
-      receiverBank: transferResult.receiverBank
-    };
-
-    // Sender transaction (money coming in - receiving from receiver)
-    const senderTransaction = {
-      id: transactionId,
-      userId: paymentRequest.senderId,
-      type: 'receive',
-      amount: paymentRequest.amount,
-      currency: paymentRequest.currency,
-      senderEmail: req.user.email,
-      senderName: `${req.user.firstName} ${req.user.lastName}`,
-      description: paymentRequest.description,
-      status: 'completed',
-      timestamp: timestamp,
-      senderBank: transferResult.senderBank,
-      receiverBank: transferResult.receiverBank
-    };
-
-    // Save transactions to Firebase
-    await realtimeDb.ref(`transactions/${transactionId}`).set(receiverTransaction);
-    await realtimeDb.ref(`transactions/${transactionId}_sender`).set(senderTransaction);
-
-    res.json({
-      message: 'Payment confirmed successfully',
-      transaction: {
-        id: transactionId,
-        amount: paymentRequest.amount,
-        currency: paymentRequest.currency,
-        senderName: paymentRequest.senderName,
-        receiverName: `${req.user.firstName} ${req.user.lastName}`,
-        senderBank: transferResult.senderBank,
-        receiverBank: transferResult.receiverBank,
-        timestamp: timestamp,
-        status: 'completed'
-      }
-    });
-
-  } catch (error) {
-    console.error('Confirm payment error:', error);
-    res.status(500).json({ error: 'Payment confirmation failed', details: error.message });
+  const response = { paymentRequest: publicRequest(request, now), serverTime: new Date(now).toISOString() };
+  if (request.transactionId && (requesterUid(request) === req.user.uid || request.payerUid === req.user.uid)) {
+    response.transaction = publicTransaction(root.transactions[request.transactionId], req.user.uid);
   }
-});
-
-// Get active payment requests for a user
-router.get('/requests', verifyToken, async (req, res) => {
-  try {
-    const { status = 'pending' } = req.query;
-    const { realtimeDb } = getFirebaseServices();
-    
-    const requestsRef = realtimeDb.ref('paymentRequests')
-      .orderByChild('senderId')
-      .equalTo(req.user.uid);
-
-    const snapshot = await requestsRef.once('value');
-    const requests = snapshot.val() || {};
-
-    // Filter by status and convert to array
-    const requestArray = Object.keys(requests)
-      .map(id => ({ id, ...requests[id] }))
-      .filter(request => request.status === status)
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    res.json({ requests: requestArray });
-
-  } catch (error) {
-    console.error('Get payment requests error:', error);
-    res.status(500).json({ error: 'Failed to get payment requests', details: error.message });
+  if (requesterUid(request) === req.user.uid && response.paymentRequest.status === 'pending') {
+    response.qrData = JSON.stringify(secureQrData(request, config));
+    response.qrCode = await QRCode.toDataURL(response.qrData, { width: 360, margin: 3 });
   }
-});
-
+  res.json(response);
+}));
+router.post('/requests/:requestId/cancel', route(async (req, res) => {
+  const id = requireId(req.params.requestId, 'Request ID');
+  const { repository, config } = req.app.locals;
+  const now = config.now();
+  const result = await repository.transaction(root => {
+    const request = root.paymentRequests?.[id];
+    if (!request || requesterUid(request) !== req.user.uid) throw httpError(404, 'REQUEST_NOT_FOUND', 'Payment request was not found');
+    if (request.status === 'cancelled') return root;
+    activeRequest(root, id, now);
+    request.status = 'cancelled';
+    request.cancelledAt = new Date(now).toISOString();
+    addNotification(root, req.user.uid, 'request_cancelled', request, now);
+    return root;
+  });
+  res.json({ paymentRequest: publicRequest(result.snapshot.paymentRequests[id], now), serverTime: new Date(now).toISOString() });
+}));
 module.exports = router;

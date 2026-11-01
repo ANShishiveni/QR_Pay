@@ -13,7 +13,7 @@ import biometricService from '../../services/biometricService';
 
 const BiometricAuthScreen = ({ route, navigation }) => {
   const { amount, recipient, phoneNumber } = route.params;
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [biometricStatus, setBiometricStatus] = useState(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -25,12 +25,12 @@ const BiometricAuthScreen = ({ route, navigation }) => {
   const checkBiometricStatus = async () => {
     try {
       setIsLoading(true);
-      console.log('Checking biometric status...');
+
       const status = await biometricService.getStatus();
-      console.log('Biometric status:', status);
+
       setBiometricStatus(status);
     } catch (error) {
-      console.error('Failed to check biometric status:', error);
+
       setBiometricStatus({
         isAvailable: false,
         isEnrolled: false,
@@ -46,18 +46,20 @@ const BiometricAuthScreen = ({ route, navigation }) => {
   const handleBiometricAuth = async () => {
     try {
       setIsAuthenticating(true);
-      const result = await biometricService.authenticateForPayment(amount, recipient);
-      
+      const result = await biometricService.authenticate();
+
       if (result.success) {
-        Alert.alert('Success', 'Biometric authentication successful', [
+        Alert.alert('Device confirmed', 'Continue with server verification to approve the simulation', [
           {
             text: 'OK',
             onPress: () => {
               // Navigate back to payment confirmation with success
-              navigation.navigate('PaymentConfirm', { 
+              navigation.navigate('OTPVerification', {
                 paymentRequest: route.params.paymentRequest,
                 receiverCard: route.params.receiverCard,
-                biometricVerified: true 
+                requestId: route.params.paymentRequest?.id,
+                purpose: 'payment_verification',
+                idempotencyKey: route.params.idempotencyKey
               });
             }
           }
@@ -66,7 +68,7 @@ const BiometricAuthScreen = ({ route, navigation }) => {
         Alert.alert('Authentication Failed', result.error || 'Biometric authentication failed');
       }
     } catch (error) {
-      console.error('Biometric authentication error:', error);
+
       Alert.alert('Error', 'Biometric authentication failed. Please try again.');
     } finally {
       setIsAuthenticating(false);
@@ -76,14 +78,17 @@ const BiometricAuthScreen = ({ route, navigation }) => {
   const handleFallback = () => {
     // Navigate to OTP verification
     navigation.navigate('OTPVerification', {
-      phoneNumber: phoneNumber || '+264816294914', // Use passed phone number or fallback
+      requestId: route.params.paymentRequest?.id,
+      paymentRequest: route.params.paymentRequest,
+      receiverCard: route.params.receiverCard,
+      idempotencyKey: route.params.idempotencyKey,
       purpose: 'payment_verification',
     });
   };
 
   const getBiometricIcon = () => {
     if (!biometricStatus) return 'finger-print';
-    
+
     if (biometricStatus.supportedTypes.includes('Face ID')) {
       return 'face-recognition';
     } else if (biometricStatus.supportedTypes.includes('Fingerprint')) {
@@ -95,7 +100,7 @@ const BiometricAuthScreen = ({ route, navigation }) => {
 
   const getBiometricText = () => {
     if (!biometricStatus) return 'Biometric Authentication';
-    
+
     if (biometricStatus.supportedTypes.includes('Face ID')) {
       return 'Face ID Authentication';
     } else if (biometricStatus.supportedTypes.includes('Fingerprint')) {
@@ -130,18 +135,18 @@ const BiometricAuthScreen = ({ route, navigation }) => {
           <View style={styles.iconContainer}>
             <Ionicons name="warning" size={80} color="#FF6B6B" />
           </View>
-          
+
           <Text style={styles.title}>Biometric Not Available</Text>
           <Text style={styles.subtitle}>
             {getErrorMessage()}
           </Text>
-          
+
           {biometricStatus?.error && (
             <Text style={styles.errorText}>
               Error: {biometricStatus.error}
             </Text>
           )}
-          
+
           <TouchableOpacity
             style={styles.fallbackButton}
             onPress={handleFallback}
@@ -158,7 +163,7 @@ const BiometricAuthScreen = ({ route, navigation }) => {
       <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >

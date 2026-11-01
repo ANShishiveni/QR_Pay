@@ -1,424 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-  Alert,
-} from 'react-native';
-import {
-  Card,
-  Title,
-  Paragraph,
-  Text,
-  ActivityIndicator,
-  Chip,
-  Searchbar,
-} from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { userAPI } from '../../config/api';
-import { theme, colors, spacing } from '../../styles/theme';
+import React, { useState } from 'react';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
+import { useAppTheme } from '../../context/ThemeContext';
+import { AppScreen, AppHeader, AppText, AppButton, AppTextField, DemoModeBadge, TransactionRow,
+  LoadingSkeleton, EmptyState, ErrorState, FormError } from '../../components/ui';
+import { activityQuery, DEFAULT_ACTIVITY_FILTERS } from '../../features/activity/activityModel';
+import useActivityFeed from '../../features/activity/useActivityFeed';
+import { accessibilityStateProps } from '../../components/ui/accessibility';
 
-export default function TransactionsScreen({ navigation }) {
-  const [transactions, setTransactions] = useState([]);
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-
-  useEffect(() => {
-    loadTransactions();
-  }, []);
-
-  useEffect(() => {
-    filterTransactions();
-  }, [transactions, searchQuery, selectedFilter]);
-
-  const loadTransactions = async () => {
-    try {
-      const response = await userAPI.getTransactions({ limit: 50 });
-      setTransactions(response.data.transactions);
-    } catch (error) {
-      console.error('Error loading transactions:', error);
-      Alert.alert('Error', 'Failed to load transactions');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadTransactions();
-    setRefreshing(false);
-  };
-
-  const filterTransactions = () => {
-    let filtered = transactions;
-
-    // Filter by type
-    if (selectedFilter !== 'all') {
-      filtered = filtered.filter(t => t.type === selectedFilter);
-    }
-
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(t => 
-        t.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.senderName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.receiverName?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    setFilteredTransactions(filtered);
-  };
-
-  const formatAmount = (amount, type) => {
-    const formattedAmount = `N$ ${parseFloat(amount).toFixed(2)}`;
-    return type === 'send' ? `-${formattedAmount}` : `+${formattedAmount}`;
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-NA', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getTransactionIcon = (type) => {
-    return type === 'send' ? 'arrow-up' : 'arrow-down';
-  };
-
-  const getTransactionColor = (type) => {
-    return type === 'send' ? colors.error : colors.success;
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed':
-        return colors.success;
-      case 'pending':
-        return colors.warning;
-      case 'failed':
-        return colors.error;
-      default:
-        return colors.gray;
-    }
-  };
-
-  const renderTransaction = ({ item }) => (
-    <Card style={styles.transactionCard}>
-      <Card.Content>
-        <View style={styles.transactionHeader}>
-          <View style={styles.transactionIcon}>
-            <Ionicons
-              name={getTransactionIcon(item.type)}
-              size={24}
-              color={getTransactionColor(item.type)}
-            />
-          </View>
-          <View style={styles.transactionDetails}>
-            <Text style={styles.transactionDescription}>
-              {item.description}
-            </Text>
-            <Text style={styles.transactionPerson}>
-              {item.type === 'send' 
-                ? `To: ${item.receiverName}`
-                : `From: ${item.senderName}`
-              }
-            </Text>
-            <Text style={styles.transactionDate}>
-              {formatDate(item.timestamp)}
-            </Text>
-          </View>
-          <View style={styles.transactionAmount}>
-            <Text style={[
-              styles.amountText,
-              { color: getTransactionColor(item.type) }
-            ]}>
-              {formatAmount(item.amount, item.type)}
-            </Text>
-            <Chip
-              mode="flat"
-              textStyle={styles.statusChipText}
-              style={[styles.statusChip, { backgroundColor: getStatusColor(item.status) }]}
-            >
-              {item.status}
-            </Chip>
-          </View>
-        </View>
-
-        {/* Bank Information */}
-        {(item.senderBank || item.receiverBank) && (
-          <View style={styles.bankInfo}>
-            <Text style={styles.bankLabel}>Banks:</Text>
-            <Text style={styles.bankText}>
-              {item.senderBank} → {item.receiverBank}
-            </Text>
-          </View>
-        )}
-      </Card.Content>
-    </Card>
-  );
-
-  const renderEmptyState = () => (
-    <Card style={styles.emptyCard}>
-      <Card.Content style={styles.emptyContent}>
-        <Ionicons name="receipt-outline" size={64} color={colors.gray} />
-        <Title style={styles.emptyTitle}>No Transactions Found</Title>
-        <Paragraph style={styles.emptySubtitle}>
-          {searchQuery || selectedFilter !== 'all' 
-            ? 'No transactions match your current filters'
-            : 'You haven\'t made any transactions yet'
-          }
-        </Paragraph>
-      </Card.Content>
-    </Card>
-  );
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading transactions...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={[colors.primary, colors.primaryDark]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <Title style={styles.headerTitle}>Transaction History</Title>
-          <Paragraph style={styles.headerSubtitle}>
-            View all your payment transactions
-          </Paragraph>
-        </View>
-      </LinearGradient>
-
-      <View style={styles.content}>
-        {/* Search and Filters */}
-        <View style={styles.filtersContainer}>
-          <Searchbar
-            placeholder="Search transactions..."
-            onChangeText={setSearchQuery}
-            value={searchQuery}
-            style={styles.searchBar}
-            theme={{
-              colors: {
-                primary: colors.primary,
-              },
-            }}
-          />
-
-          <View style={styles.filterChips}>
-            <Chip
-              selected={selectedFilter === 'all'}
-              onPress={() => setSelectedFilter('all')}
-              style={styles.filterChip}
-              textStyle={styles.filterChipText}
-            >
-              All
-            </Chip>
-            <Chip
-              selected={selectedFilter === 'send'}
-              onPress={() => setSelectedFilter('send')}
-              style={styles.filterChip}
-              textStyle={styles.filterChipText}
-            >
-              Sent
-            </Chip>
-            <Chip
-              selected={selectedFilter === 'receive'}
-              onPress={() => setSelectedFilter('receive')}
-              style={styles.filterChip}
-              textStyle={styles.filterChipText}
-            >
-              Received
-            </Chip>
-          </View>
-        </View>
-
-        {/* Transactions List */}
-        <FlatList
-          data={filteredTransactions}
-          renderItem={renderTransaction}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListEmptyComponent={renderEmptyState}
-        />
-      </View>
-    </View>
-  );
+function FilterChip({ title, label = title, selected, onPress }) {
+  const { colors } = useAppTheme();
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} {...accessibilityStateProps({ selected })} onPress={onPress}
+    style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22,
+      backgroundColor: selected ? colors.primary : colors.surface, borderWidth: 1, borderColor: selected ? colors.primary : colors.border, opacity: pressed ? 0.75 : 1 })}>
+    <AppText variant="label" color={selected ? colors.onPrimary : colors.textSecondary}>{title}</AppText>
+  </Pressable>;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  header: {
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.white,
-    marginTop: spacing.sm,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: colors.white,
-    opacity: 0.9,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  filtersContainer: {
-    marginBottom: spacing.lg,
-  },
-  searchBar: {
-    marginBottom: spacing.md,
-    elevation: 2,
-  },
-  filterChips: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  filterChip: {
-    backgroundColor: colors.white,
-  },
-  filterChipText: {
-    fontSize: 12,
-  },
-  listContainer: {
-    paddingBottom: spacing.xl,
-  },
-  transactionCard: {
-    elevation: 2,
-    borderRadius: 12,
-    marginBottom: spacing.md,
-  },
-  transactionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  transactionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  transactionDetails: {
-    flex: 1,
-  },
-  transactionDescription: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  transactionPerson: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  transactionAmount: {
-    alignItems: 'flex-end',
-  },
-  amountText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  statusChip: {
-    height: 28,
-    minWidth: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.white,
-    textTransform: 'capitalize',
-    textAlign: 'center',
-    lineHeight: 12,
-  },
-  bankInfo: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  bankLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  bankText: {
-    fontSize: 12,
-    color: colors.text,
-    marginTop: spacing.xs,
-  },
-  emptyCard: {
-    elevation: 2,
-    borderRadius: 12,
-    marginTop: spacing.xl,
-  },
-  emptyContent: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-});
+export default function TransactionsScreen({ navigation }) {
+  const { user } = useAuth();
+  const { colors } = useAppTheme();
+  const [filters, setFilters] = useState(DEFAULT_ACTIVITY_FILTERS);
+  const [draft, setDraft] = useState({ search: '', fromDate: '', toDate: '' });
+  const [expanded, setExpanded] = useState(false);
+  const [filterError, setFilterError] = useState('');
+  const feed = useActivityFeed(user?.uid, filters, navigation);
+  const activeFilters = Object.keys(DEFAULT_ACTIVITY_FILTERS).some(key => filters[key] !== DEFAULT_ACTIVITY_FILTERS[key]);
+  const apply = () => {
+    try { const next = { ...filters, ...draft }; activityQuery(next); setFilterError(''); setFilters(next); }
+    catch (error) { setFilterError(error.message); }
+  };
+  const reset = () => { setFilters(DEFAULT_ACTIVITY_FILTERS); setDraft({ search: '', fromDate: '', toDate: '' }); setFilterError(''); };
+  const header = <View style={{ gap: 18, paddingTop: 24, paddingBottom: 16 }}>
+    <AppHeader title="Activity" subtitle="Your simulated payments, with a clear record for every transaction." />
+    <DemoModeBadge />
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      {[['all', 'All'], ['sent', 'Sent'], ['received', 'Received']].map(([value, title]) => <FilterChip key={value} title={title}
+        label={value === 'all' ? 'All activity' : title} selected={filters.type === value} onPress={() => setFilters(previous => ({ ...previous, type: value }))} />)}
+    </View>
+    <AppTextField label="Search activity" value={draft.search} onChangeText={search => setDraft(previous => ({ ...previous, search }))}
+      placeholder="Name, reference or transaction ID" maxLength={120} returnKeyType="search" onSubmitEditing={apply} />
+    <AppButton title={expanded ? 'Hide date and status filters' : 'Date and status filters'} variant="ghost" onPress={() => setExpanded(value => !value)}
+      accessibilityState={{ expanded }}
+      accessibilityHint={expanded ? 'Date and status filters are expanded.' : 'Expand date and status filters.'} />
+    {expanded ? <View style={{ gap: 14 }}>
+      <AppText variant="label">Payment status</AppText>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {['all', 'completed', 'pending', 'failed', 'cancelled', 'expired'].map(status => <FilterChip key={status}
+          title={status === 'all' ? 'Any status' : status.charAt(0).toUpperCase() + status.slice(1)} label={`Status: ${status}`} selected={filters.status === status}
+          onPress={() => setFilters(previous => ({ ...previous, status }))} />)}
+      </View>
+      <AppTextField label="From date" value={draft.fromDate} onChangeText={fromDate => setDraft(previous => ({ ...previous, fromDate }))}
+        placeholder="YYYY-MM-DD" maxLength={10} autoCapitalize="none" hint="Namibia calendar date (YYYY-MM-DD)." />
+      <AppTextField label="To date" value={draft.toDate} onChangeText={toDate => setDraft(previous => ({ ...previous, toDate }))}
+        placeholder="YYYY-MM-DD" maxLength={10} autoCapitalize="none" hint="Includes the full day in Africa/Windhoek." />
+    </View> : null}
+    <FormError message={filterError} />
+    <AppButton title="Apply search and dates" variant="secondary" onPress={apply} />
+    {activeFilters ? <AppButton title="Clear activity filters" variant="ghost" onPress={reset} /> : null}
+    {feed.items.length ? <AppText variant="caption" color="textSecondary">Showing {feed.items.length} of {feed.pagination?.total ?? feed.items.length} matching transactions</AppText> : null}
+    {feed.error && feed.items.length ? <View style={{ gap: 10 }}><FormError message={feed.error} /><AppText variant="caption" color="textSecondary">Showing your last loaded activity.</AppText>
+      <AppButton title="Refresh activity" variant="secondary" onPress={feed.refresh} loading={feed.refreshing} /></View> : null}
+  </View>;
+  return <AppScreen scroll={false} contentStyle={{ flex: 1, paddingVertical: 0, maxWidth: 860 }}>
+    <FlatList data={feed.items} keyExtractor={item => item.id} ListHeaderComponent={header}
+      keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 30 }}
+      refreshControl={<RefreshControl refreshing={feed.refreshing} onRefresh={feed.refresh} tintColor={colors.primary} />}
+      renderItem={({ item }) => <TransactionRow transaction={item} onPress={() => navigation.navigate('TransactionDetail', { transactionId: item.id })} />}
+      ListEmptyComponent={feed.loading || feed.refreshing ? <LoadingSkeleton label="Loading activity" lines={5} />
+        : feed.error ? <ErrorState title="Activity is unavailable" message={feed.error} onRetry={feed.refresh} retryLabel="Retry activity" />
+          : <EmptyState title={activeFilters ? 'No matching activity' : 'Your activity starts here'} message={activeFilters
+            ? 'Try a different name, date or status.' : 'Complete a simulated payment to see its record and receipt here.'}
+            actionLabel={activeFilters ? 'Clear activity filters' : 'Scan a payment request'} onAction={activeFilters ? reset : () => navigation.navigate('QRScan')} />}
+      ListFooterComponent={feed.pagination?.hasMore ? <View style={{ paddingTop: 20 }}><AppButton title="Load more activity" variant="secondary"
+        onPress={feed.loadMore} loading={feed.loadingMore} disabled={feed.refreshing || feed.loading} /></View> : null} />
+  </AppScreen>;
+}

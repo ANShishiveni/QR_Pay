@@ -1,364 +1,104 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  TouchableOpacity,
-  TextInput,
-  Switch,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, Switch, View } from 'react-native';
+import { AppButton, AppCard, AppHeader, AppScreen, AppText, ErrorState, FormError, LoadingSkeleton } from '../../components/ui';
+import { useAppTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { userAPI } from '../../config/api';
-import { colors } from '../../styles/theme';
-import mfaService from '../../services/mfaService';
-import toastService from '../../services/toastService';
+import biometricService from '../../services/biometricService';
+import useProfile from '../../features/profile/useProfile';
 
-const SettingsScreen = ({ navigation }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  
-  // Authentication settings state
-  const [authSettings, setAuthSettings] = useState({
-    smsEnabled: true,
-    primaryMethod: 'sms',
-  });
-  const [availableMethods, setAvailableMethods] = useState([]);
-  const [mfaStatus, setMfaStatus] = useState(null);
-
+export default function SettingsScreen({ navigation }) {
+  const { profile, loading, error, refresh, replace } = useProfile(navigation);
+  const { colors, setMode } = useAppTheme();
+  const { checkAuthStatus } = useAuth();
+  const [values, setValues] = useState({ theme: 'system', notifications: true, biometrics: false });
+  const [biometrics, setBiometrics] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState('');
+  const [message, setMessage] = useState('');
+  const lock = useRef(false);
+  const appearanceRefs = useRef({});
+  const appearanceModes = ['system', 'light', 'dark'];
+  const selectAppearance = mode => {
+    if (busy) return;
+    setMessage('');
+    setValues(current => ({ ...current, theme: mode }));
+  };
+  const appearanceKeyDown = (event, mode) => {
+    if (busy) return;
+    const index = appearanceModes.indexOf(mode);
+    let next;
+    if (event.key === ' ' || event.key === 'Spacebar') next = mode;
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = appearanceModes[(index + 1) % appearanceModes.length];
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = appearanceModes[(index + appearanceModes.length - 1) % appearanceModes.length];
+    else if (event.key === 'Home') next = appearanceModes[0];
+    else if (event.key === 'End') next = appearanceModes[appearanceModes.length - 1];
+    else return;
+    event.preventDefault();
+    event.stopPropagation();
+    selectAppearance(next);
+    appearanceRefs.current[next]?.focus?.();
+  };
+  useEffect(() => { if (profile) setValues({ theme: 'system', notifications: true, biometrics: false, ...profile.preferences }); }, [profile?.uid]);
   useEffect(() => {
-    loadUserProfile();
-    loadAuthSettings();
+    let active = true;
+    biometricService.checkAvailability().then(status => { if (active) setBiometrics(status); }).catch(() => { if (active) setBiometrics({ canUseBiometrics: false }); });
+    return () => { active = false; };
   }, []);
-
-  const loadUserProfile = async () => {
+  const toggleBiometrics = async enabled => {
+    if (lock.current) return;
+    setMessage('');
+    if (!enabled) { setValues(current => ({ ...current, biometrics: false })); return; }
+    if (!biometrics?.canUseBiometrics) return;
+    lock.current = true; setBusy(true); setFailure('');
     try {
-      const response = await userAPI.getProfile();
-      setUser(response.data.user);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-      toastService.error('Error', 'Failed to load profile');
-    }
+      const result = await biometricService.authenticate({ promptMessage: 'Enable optional device confirmation', disableDeviceFallback: true });
+      if (result.success) setValues(current => ({ ...current, biometrics: true }));
+      else setFailure('Device confirmation was not completed. Your preference is unchanged.');
+    } catch { setFailure('Device confirmation is unavailable. You can still use server verification.'); }
+    finally { lock.current = false; setBusy(false); }
   };
-
-  const loadAuthSettings = async () => {
+  const save = async () => {
+    if (lock.current) return;
+    lock.current = true; setBusy(true); setFailure(''); setMessage('');
     try {
-      setLoading(true);
-      
-      // Initialize MFA service
-      await mfaService.initialize();
-      
-      // Get MFA status
-      const status = await mfaService.getStatus();
-      setMfaStatus(status);
-      
-      if (status.success) {
-        setAuthSettings(status.preferences);
-        setAvailableMethods(status.availableMethods);
-      }
-    } catch (error) {
-      console.error('Error loading auth settings:', error);
-      toastService.error('Error', 'Failed to load authentication settings');
-    } finally {
-      setLoading(false);
-    }
+      const response = await userAPI.updatePreferences(values);
+      const saved = response.data.preferences;
+      replace({ ...profile, preferences: saved });
+      setValues(saved);
+      let localFailure = false;
+      try {
+        await setMode(saved.theme);
+        if (saved.biometrics && biometrics?.canUseBiometrics) await biometricService.enableBiometric();
+        else await biometricService.disableBiometric();
+      } catch { localFailure = true; }
+      setMessage(localFailure ? 'Account preferences saved. This device could not save every local preference.' : 'Your preferences have been saved.');
+      await checkAuthStatus({ background: true });
+    } catch { setFailure('We could not save your preferences. Your changes are still here; try again.'); }
+    finally { lock.current = false; setBusy(false); }
   };
-
-  const requestImagePickerPermissions = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      toastService.error('Permission Required', 'We need access to your photo library to upload a profile picture.');
-      return false;
-    }
-    return true;
-  };
-
-  // Authentication settings handlers
-
-  const handlePrimaryMethodChange = async (method) => {
-    try {
-      setLoading(true);
-      setAuthSettings(prev => ({ ...prev, primaryMethod: method }));
-      await mfaService.updatePreferences({ primaryMethod: method });
-      toastService.success('Success', `Primary authentication method changed to ${method}`);
-    } catch (error) {
-      console.error('Error changing primary method:', error);
-      toastService.error('Error', 'Failed to update primary authentication method');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePasswordChange = async () => {
-    const { currentPassword, newPassword, confirmPassword } = passwordData;
-
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      toastService.error('Validation Error', 'Please fill in all password fields');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toastService.error('Validation Error', 'New passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      toastService.error('Validation Error', 'New password must be at least 6 characters long');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await userAPI.changePassword({
-        currentPassword,
-        newPassword,
-      });
-
-      toastService.success('Success', 'Password changed successfully!');
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    } catch (error) {
-      console.error('Error changing password:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to change password';
-      toastService.error('Error', errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Password Change Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Change Password</Text>
-          
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Current Password</Text>
-            <TextInput
-              style={styles.input}
-              value={passwordData.currentPassword}
-              onChangeText={(text) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
-              placeholder="Enter current password"
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>New Password</Text>
-            <TextInput
-              style={styles.input}
-              value={passwordData.newPassword}
-              onChangeText={(text) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
-              placeholder="Enter new password"
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Confirm New Password</Text>
-            <TextInput
-              style={styles.input}
-              value={passwordData.confirmPassword}
-              onChangeText={(text) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
-              placeholder="Confirm new password"
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.changePasswordButton, loading && styles.disabledButton]}
-            onPress={handlePasswordChange}
-            disabled={loading}
-          >
-            <Text style={styles.changePasswordText}>
-              {loading ? 'Changing...' : 'Change Password'}
-            </Text>
-          </TouchableOpacity>
+  return <AppScreen contentStyle={{ maxWidth: 680, gap: 20 }}>
+    <AppHeader title="Settings" kicker="MAKE IT YOURS" subtitle="Appearance, updates and account security." onBack={() => navigation.goBack()} />
+    {loading && !profile ? <LoadingSkeleton label="Loading preferences" lines={4} /> : !profile ? <ErrorState message={error} onRetry={refresh} /> : <>
+      <FormError message={failure || error} />{message ? <AppText color="primary" accessibilityRole="alert">{message}</AppText> : null}
+      <AppCard style={{ gap: 16 }}><AppText variant="h3" accessibilityRole="header">Appearance</AppText><AppText color="textSecondary" variant="body2">Choose a theme, then save your preferences.</AppText>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} accessibilityRole="radiogroup" accessibilityLabel="Appearance">
+          {appearanceModes.map(mode => <Pressable key={mode} ref={node => { appearanceRefs.current[mode] = node; }} accessible accessibilityRole="radio" accessibilityLabel={`${mode[0].toUpperCase()}${mode.slice(1)}`} accessibilityState={{ checked: values.theme === mode, disabled: busy }} disabled={busy} onPress={() => selectAppearance(mode)}
+            {...(Platform.OS === 'web' ? { 'aria-checked': values.theme === mode, 'aria-disabled': busy, tabIndex: !busy && values.theme === mode ? 0 : -1, onKeyDown: event => appearanceKeyDown(event, mode) } : {})}
+            style={{ minHeight: 48, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: values.theme === mode ? colors.primary : colors.controlBorder, backgroundColor: values.theme === mode ? colors.primarySoft : colors.surface }}><AppText variant="label" color={values.theme === mode ? 'primary' : 'text'}>{mode[0].toUpperCase()}{mode.slice(1)}</AppText></Pressable>)}
         </View>
-
-      </ScrollView>
-    </SafeAreaView>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  placeholder: {
-    width: 34,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  section: {
-    marginTop: 30,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 20,
-  },
-  photoSection: {
-    alignItems: 'center',
-  },
-  photoContainer: {
-    marginBottom: 20,
-  },
-  profilePhoto: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.gray,
-  },
-  placeholderPhoto: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  changePhotoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  changePhotoText: {
-    color: colors.white,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: colors.text,
-    backgroundColor: colors.white,
-  },
-  changePasswordButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  disabledButton: {
-    backgroundColor: colors.gray,
-  },
-  changePasswordText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Authentication settings styles
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  settingText: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 14,
-    color: colors.gray,
-    lineHeight: 18,
-  },
-  methodSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: colors.lightGray,
-    borderRadius: 8,
-    minWidth: 120,
-  },
-  methodText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-    marginRight: 8,
-  },
-});
-
-export default SettingsScreen;
+      </AppCard>
+      <AppCard style={{ gap: 16 }}><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}><View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 200, minWidth: 0, maxWidth: '100%' }}><AppText variant="h3" accessibilityRole="header">In-app alerts</AppText></View>
+        <Switch accessibilityLabel="Show in-app alerts" accessibilityState={{ disabled: busy, checked: values.notifications }} value={values.notifications} onValueChange={value => { setMessage(''); setValues(current => ({ ...current, notifications: value })); }} disabled={busy} trackColor={{ false: colors.controlBorder, true: colors.primary }} thumbColor={colors.surface} />
+        </View><AppText variant="body2" color="textSecondary">Save whether NamPay shows in-app alerts. Your event and payment histories remain available. Push notifications are not enabled.</AppText>
+      </AppCard>
+      <AppCard style={{ gap: 16 }}><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}><View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 200, minWidth: 0, maxWidth: '100%' }}><AppText variant="h3" accessibilityRole="header">Device check</AppText></View>
+        <Switch accessibilityLabel="Optional device confirmation" accessibilityState={{ disabled: busy || (!biometrics?.canUseBiometrics && !values.biometrics), checked: values.biometrics }} value={values.biometrics} onValueChange={toggleBiometrics} disabled={busy || (!biometrics?.canUseBiometrics && !values.biometrics)} trackColor={{ false: colors.controlBorder, true: colors.primary }} thumbColor={colors.surface} />
+        </View><AppText variant="body2" color="textSecondary">{biometrics === null ? 'Checking this device’s biometric capability…' : biometrics.canUseBiometrics ? 'Use an enrolled biometric for optional confirmation on this device.' : 'Biometric confirmation is unavailable on this device. Your account preference does not enable unsupported hardware.'}</AppText>
+        <AppText variant="body2" color="textSecondary">This optional local prompt never replaces the server verification code required to approve a simulated payment.</AppText>
+      </AppCard>
+      <AppButton title="Save preferences" onPress={save} loading={busy} />
+      <AppCard style={{ gap: 8 }}><AppText variant="h3" accessibilityRole="header">Account security</AppText><AppButton title="Change password" variant="ghost" icon="lock-closed-outline" onPress={() => navigation.navigate('ChangePassword')} disabled={busy} /><AppButton title="Help and FAQ" variant="ghost" onPress={() => navigation.navigate('Help')} disabled={busy} /><AppButton title="About and privacy" variant="ghost" onPress={() => navigation.navigate('About')} disabled={busy} /></AppCard>
+    </>}
+  </AppScreen>;
+}

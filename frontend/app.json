@@ -1,42 +1,54 @@
 {
   "expo": {
-    "name": "NamPay",
+    "name": "NamPay Demo",
     "slug": "nampay",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "extra": {
-      "apiUrl": "http://192.168.178.41:3000"
-    },
+    "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nampay.app"
+      "bundleIdentifier": "com.nampay.app",
+      "buildNumber": "2"
     },
     "android": {
       "package": "com.nampay.app",
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
-      ]
+        "CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "versionCode": 2
     },
     "web": {
-      "bundler": "webpack"
+      "bundler": "metro"
     },
     "plugins": [
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow NamPay to access your camera to scan QR codes."
+          "cameraPermission": "Allow NamPay to access your camera to scan QR codes.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a profile photo or QR image for this NamPay demonstration.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       [
-        "expo-barcode-scanner",
+        "expo-local-authentication",
         {
-          "cameraPermission": "Allow NamPay to access your camera to scan QR codes."
+          "faceIDPermission": "Use Face ID for optional local confirmation before server verification."
         }
       ]
     ]

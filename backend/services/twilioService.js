@@ -1,89 +1,25 @@
-const twilio = require('twilio');
-
+// Importing the application never initializes a paid provider or sends SMS.
 class TwilioService {
-  constructor() {
-    this.client = twilio(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
-    );
-    this.phoneNumber = process.env.TWILIO_PHONE_NUMBER;
+  constructor(config = {}) {
+    this.accountSid = config.twilioAccountSid || process.env.TWILIO_ACCOUNT_SID;
+    this.authToken = config.twilioAuthToken || process.env.TWILIO_AUTH_TOKEN;
+    this.from = config.twilioPhoneNumber || process.env.TWILIO_PHONE_NUMBER;
+    if (!/^AC[a-fA-F0-9]{32}$/.test(this.accountSid || '') || !this.authToken || !/^\+[1-9]\d{7,14}$/.test(this.from || '')) {
+      throw Object.assign(new Error('The verification provider is unavailable'), { status: 503, code: 'OTP_PROVIDER_UNAVAILABLE' });
+    }
   }
-
-  /**
-   * Send SMS message
-   * @param {string} to - Recipient phone number
-   * @param {string} message - Message content
-   * @returns {Promise<Object>} - Twilio message result
-   */
-  async sendSMS(to, message) {
+  async sendOTP(destination, code) {
+    if (!/^\+[1-9]\d{7,14}$/.test(destination || '') || !/^\d{6}$/.test(code || '')) {
+      throw Object.assign(new Error('The verification destination is invalid'), { status: 400, code: 'OTP_DESTINATION_INVALID' });
+    }
     try {
-      const result = await this.client.messages.create({
-        body: message,
-        from: this.phoneNumber,
-        to: to
-      });
-
-      console.log(`SMS sent successfully to ${to}:`, result.sid);
-      return {
-        success: true,
-        messageId: result.sid,
-        status: result.status
-      };
-    } catch (error) {
-      console.error('SMS sending failed:', error);
-      return {
-        success: false,
-        error: error.message,
-        code: error.code
-      };
+      this.client ||= require('twilio')(this.accountSid, this.authToken, { lazyLoading: true, autoRetry: false, timeout: 10000 });
+      await this.client.messages.create({ to: destination, from: this.from,
+        body: `Your NamPay simulated-payment verification code is ${code}. It expires in five minutes. Do not share this code.` });
+    } catch {
+      // Provider exceptions can contain phone numbers and request bodies.
+      throw Object.assign(new Error('The verification code could not be delivered'), { status: 503, code: 'OTP_DELIVERY_FAILED' });
     }
-  }
-
-  /**
-   * Send OTP via SMS
-   * @param {string} phoneNumber - Recipient phone number
-   * @param {string} otp - OTP code
-   * @param {string} purpose - Purpose of OTP (e.g., 'payment_verification')
-   * @returns {Promise<Object>} - SMS result
-   */
-  async sendOTP(phoneNumber, otp, purpose = 'verification') {
-    const message = `Your NamPay ${purpose} code is: ${otp}. This code expires in 5 minutes. Do not share this code with anyone.`;
-    
-    return await this.sendSMS(phoneNumber, message);
-  }
-
-  /**
-   * Validate phone number format
-   * @param {string} phoneNumber - Phone number to validate
-   * @returns {boolean} - Is valid phone number
-   */
-  isValidPhoneNumber(phoneNumber) {
-    // Basic E.164 format validation
-    const phoneRegex = /^\+[1-9]\d{1,14}$/;
-    return phoneRegex.test(phoneNumber);
-  }
-
-  /**
-   * Format phone number to E.164
-   * @param {string} phoneNumber - Raw phone number
-   * @returns {string} - Formatted phone number
-   */
-  formatPhoneNumber(phoneNumber) {
-    // Remove all non-digit characters
-    const digits = phoneNumber.replace(/\D/g, '');
-    
-    // Add country code if missing (assuming Namibia +264)
-    if (digits.length === 9 && digits.startsWith('81')) {
-      return `+264${digits}`;
-    }
-    
-    // Add + if missing
-    if (!phoneNumber.startsWith('+')) {
-      return `+${digits}`;
-    }
-    
-    return phoneNumber;
   }
 }
-
-module.exports = new TwilioService();
+module.exports = { TwilioService };

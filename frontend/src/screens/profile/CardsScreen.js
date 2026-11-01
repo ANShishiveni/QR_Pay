@@ -1,712 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from 'react-native';
-import {
-  Card,
-  Title,
-  Paragraph,
-  Button,
-  Text,
-  List,
-  Divider,
-  ActivityIndicator,
-  Modal,
-  TextInput,
-} from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useRef, useState } from 'react';
+import { RefreshControl, View } from 'react-native';
+import { AppScreen, AppHeader, AppText, AppCard, AppButton, DemoModeBadge, MaskedCard, StatusBadge, SecurityPrompt, FormError, LoadingSkeleton, EmptyState, ErrorState, ConfirmBottomSheet } from '../../components/ui';
 import { paymentAPI } from '../../config/api';
-import { 
-  validateCard, 
-  formatCardNumber, 
-  getMaxCardNumberLength,
-  getCardType 
-} from '../../utils/cardValidation';
-import { theme, colors, spacing, typography } from '../../styles/theme';
-import toastService from '../../services/toastService';
+import { useAuth } from '../../context/AuthContext';
+import useFocusedResource from '../qr/useFocusedResource';
+import { checkedCards, checkedTestInstruments, cardAvailability, cardOperationApplied } from './cardModel';
+
+const successMessage = { add: 'Test card added.', remove: 'Test card removed.', default: 'Default test card updated.' };
 
 export default function CardsScreen({ navigation }) {
-  const [cards, setCards] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showAddCardModal, setShowAddCardModal] = useState(false);
-  const [isAddingCard, setIsAddingCard] = useState(false);
-  const [newCard, setNewCard] = useState({
-    cardNumber: '',
-    expMonth: '',
-    expYear: '',
-    cvc: '',
-    cardholderName: '',
-  });
+  const { user } = useAuth();
+  const loadCards = useCallback(async () => checkedCards((await paymentAPI.getCards()).data, user?.uid), [user?.uid]);
+  const loadCatalog = useCallback(async () => checkedTestInstruments((await paymentAPI.getTestInstruments()).data), []);
+  const state = useFocusedResource(loadCards, navigation, 60000);
+  const catalog = useFocusedResource(loadCatalog, navigation, 300000);
+  const [adding, setAdding] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [confirmation, setConfirmation] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [uncertain, setUncertain] = useState(null);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const operationRef = useRef(null);
+  const cards = state.data?.cards || [];
+  const available = (catalog.data || []).filter(item => !cards.some(card => card.testCardId === item.id));
+  const locked = busy || Boolean(uncertain) || Boolean(state.error) || state.loading;
 
-  useEffect(() => {
-    loadCards();
+  const finish = useCallback((operation, current) => {
+    const applied = cardOperationApplied(operation, current.cards);
+    setUncertain(null); operationRef.current = null;
+    setMessage(applied ? successMessage[operation.type] : '');
+    setError(applied ? '' : 'That change is not present in your latest card list. Review the cards below before trying again.');
+    if (applied && operation.type === 'add') { setAdding(false); setSelectedId(null); }
   }, []);
-
-  const loadCards = async () => {
+  const mutate = async operation => {
+    if (operationRef.current || locked) return;
+    operationRef.current = operation; setBusy(true); setMessage(''); setError('');
     try {
-      const response = await paymentAPI.getCards();
-      setCards(response.data.cards);
-    } catch (error) {
-      console.error('Error loading cards:', error);
-      toastService.error('Error', 'Failed to load cards');
-    } finally {
-      setIsLoading(false);
+      if (operation.type === 'add') await paymentAPI.addCard({ testCardId: operation.testCardId });
+      else if (operation.type === 'remove') await paymentAPI.removeCard(operation.id);
+      else await paymentAPI.setDefaultCard(operation.id);
+    } catch { /* A failed response does not establish whether a change was saved. */ }
+    const current = await state.refresh(true);
+    setConfirmation(null); setBusy(false);
+    if (current) finish(operation, current);
+    else {
+      setUncertain({ operation });
+      setError('We couldn’t confirm the change. Check your cards before making another change.');
     }
   };
-
-  const handleAddCard = async () => {
-    if (!validateCardForm()) return;
-
-    setIsAddingCard(true);
-    try {
-      await paymentAPI.addCard(newCard);
-      setShowAddCardModal(false);
-      setNewCard({
-        cardNumber: '',
-        expMonth: '',
-        expYear: '',
-        cvc: '',
-        cardholderName: '',
-      });
-      await loadCards();
-      toastService.success('Success', 'Card added successfully!');
-    } catch (error) {
-      console.error('Add card error:', error);
-      toastService.error('Error', error.response?.data?.error || 'Failed to add card');
-    } finally {
-      setIsAddingCard(false);
-    }
+  const checkCards = async () => {
+    const current = await state.refresh(true);
+    if (current && uncertain) finish(uncertain.operation, current);
   };
-
-  const validateCardForm = () => {
-    const validation = validateCard(newCard);
-    
-    if (!validation.isValid) {
-      toastService.error('Validation Error', validation.errors.join('\n'));
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleCardNumberChange = (value) => {
-    // Remove all non-numeric characters
-    const cleanValue = value.replace(/\D/g, '');
-    
-    // Get maximum allowed length based on current input
-    const maxLength = getMaxCardNumberLength(cleanValue);
-    
-    // Limit input to maximum allowed length
-    if (cleanValue.length <= maxLength) {
-      // Format the card number with spaces
-      const formatted = formatCardNumber(cleanValue);
-      setNewCard({ ...newCard, cardNumber: formatted });
-    }
-  };
-
-  const handleCVCChange = (value) => {
-    // Remove all non-numeric characters and limit to 4 digits
-    const cleanValue = value.replace(/\D/g, '').slice(0, 4);
-    setNewCard({ ...newCard, cvc: cleanValue });
-  };
-
-  const handleExpiryMonthChange = (value) => {
-    // Remove all non-numeric characters and limit to 2 digits
-    const cleanValue = value.replace(/\D/g, '').slice(0, 2);
-    setNewCard({ ...newCard, expMonth: cleanValue });
-  };
-
-  const handleExpiryYearChange = (value) => {
-    // Remove all non-numeric characters and limit to 4 digits
-    const cleanValue = value.replace(/\D/g, '').slice(0, 4);
-    setNewCard({ ...newCard, expYear: cleanValue });
-  };
-
-  const handleSetDefault = async (cardId) => {
-    try {
-      await paymentAPI.setDefaultCard(cardId);
-      await loadCards();
-      toastService.success('Success', 'Default card updated successfully!');
-    } catch (error) {
-      console.error('Set default card error:', error);
-      toastService.error('Error', 'Failed to update default card');
-    }
-  };
-
-  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const [cardToRemove, setCardToRemove] = useState(null);
-
-  const handleRemoveCard = (cardId, cardInfo) => {
-    setCardToRemove({ id: cardId, info: cardInfo });
-    setShowRemoveConfirm(true);
-  };
-
-  const cancelRemove = () => {
-    setShowRemoveConfirm(false);
-    setCardToRemove(null);
-  };
-
-  const confirmRemoveCard = async () => {
-    if (!cardToRemove) return;
-    
-    setShowRemoveConfirm(false);
-    try {
-      await paymentAPI.removeCard(cardToRemove.id);
-      await loadCards();
-      toastService.success('Success', 'Card removed successfully!');
-    } catch (error) {
-      console.error('Remove card error:', error);
-      toastService.error('Error', 'Failed to remove card');
-    } finally {
-      setCardToRemove(null);
-    }
-  };
-
-  const getCardIcon = (brand) => {
-    switch (brand.toLowerCase()) {
-      case 'visa':
-        return 'card';
-      case 'mastercard':
-        return 'card';
-      case 'amex':
-        return 'card';
-      default:
-        return 'card-outline';
-    }
-  };
-
-  const getBankColor = (bank) => {
-    switch (bank) {
-      case 'FNB':
-        return '#1E3A8A';
-      case 'Standard Bank':
-        return '#059669';
-      case 'Bank Windhoek':
-        return '#DC2626';
-      case 'Nedbank':
-        return '#7C3AED';
-      default:
-        return colors.primary;
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading cards...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={[colors.primary, colors.primaryDark]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <Title style={styles.headerTitle}>My Cards</Title>
-          <Paragraph style={styles.headerSubtitle}>
-            Manage your payment cards
-          </Paragraph>
-        </View>
-      </LinearGradient>
-
-      <ScrollView style={styles.content}>
-        {/* Add Card Button */}
-        <Button
-          mode="contained"
-          onPress={() => setShowAddCardModal(true)}
-          style={styles.addCardButton}
-          icon="plus"
-          theme={{
-            colors: {
-              primary: colors.primary,
-            },
-          }}
-        >
-          Add New Card
-        </Button>
-
-        {/* Cards List */}
-        {cards.length > 0 ? (
-          <View style={styles.cardsList}>
-            {cards.map((card, index) => (
-              <Card key={card.id} style={styles.cardItem}>
-                <Card.Content>
-                  <View style={styles.cardHeader}>
-                    <View style={styles.cardInfo}>
-                      <View style={styles.cardIcon}>
-                        <Ionicons 
-                          name={getCardIcon(card.brand)} 
-                          size={24} 
-                          color={getBankColor(card.bank)} 
-                        />
-                      </View>
-                      <View style={styles.cardDetails}>
-                        <Text style={styles.cardBrand}>{card.brand}</Text>
-                        <Text style={styles.cardNumber}>**** **** **** {card.last4}</Text>
-                        <Text style={styles.cardBank}>{card.bank}</Text>
-                      </View>
-                    </View>
-                    {card.isDefault && (
-                      <View style={styles.defaultBadge}>
-                        <Text style={styles.defaultText}>DEFAULT</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.cardActions}>
-                    {!card.isDefault && (
-                      <Button
-                        mode="outlined"
-                        onPress={() => handleSetDefault(card.id)}
-                        style={styles.actionButton}
-                        compact
-                        theme={{
-                          colors: {
-                            primary: colors.primary,
-                          },
-                        }}
-                      >
-                        Set Default
-                      </Button>
-                    )}
-                    <Button
-                      mode="outlined"
-                      onPress={() => handleRemoveCard(card.id, card)}
-                      style={[styles.actionButton, styles.removeButton]}
-                      compact
-                      textColor={colors.error}
-                      theme={{
-                        colors: {
-                          primary: colors.error,
-                        },
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </View>
-                </Card.Content>
-              </Card>
-            ))}
+  const refresh = () => Promise.all([checkCards(), catalog.refresh()]);
+  const showAdd = () => { setAdding(true); setMessage(''); setError(''); };
+  return <AppScreen refreshControl={<RefreshControl refreshing={(state.refreshing || catalog.refreshing) && !state.loading} onRefresh={refresh} />}>
+    <AppHeader title="Test cards" kicker="YOUR DEMO INSTRUMENTS" subtitle="Choose a synthetic card for simulated payments." onBack={() => navigation.goBack()} />
+    <DemoModeBadge />
+    <SecurityPrompt title="Predefined test cards only" message="Choose from the demo catalog. No real card number, security code or bank account is needed. No real funds can move." />
+    {message ? <AppText color="success" accessibilityLiveRegion="polite">{message}</AppText> : null}
+    <FormError message={error} />
+    {uncertain ? <AppButton title="Check my cards" variant="secondary" loading={state.refreshing} onPress={checkCards} /> : null}
+    {state.loading ? <LoadingSkeleton label="Loading your test cards" /> : state.error ? <ErrorState title="Cards unavailable" message="Your latest card list could not be checked. Refresh before changing cards." retryLabel="Refresh test cards" onRetry={checkCards} /> : <>
+      {cards.length > 0 && state.data.defaultCount !== 1 ? <SecurityPrompt title="Choose one default card" message="The server has no single default for these older records. Choose an available test card as default or remove a record to update the list." /> : null}
+      {cards.length ? <View style={{ gap: 16 }}>{cards.map(card => {
+        const availability = catalog.data ? cardAvailability(card, catalog.data, user?.uid) : 'catalog-unavailable';
+        const cardLabel = `${card.brand} ending ${card.last4 || 'unavailable'}`;
+        return <AppCard key={card.id} testID={`linked-card-${card.id}`} style={{ gap: 12 }}>
+          <MaskedCard card={card} />
+          <AppText variant="body2" color="textSecondary">{card.bankLabel}</AppText>
+          {availability === 'ready' ? <AppText variant="caption" color="textSecondary">Expires {String(card.expMonth).padStart(2, '0')}/{card.expYear} · simulation only</AppText>
+            : <StatusBadge status="failed" label={availability === 'expired' ? 'Expired · remove and add again' : availability === 'catalog-unavailable' ? 'Catalog unavailable' : 'Replace before paying'} />}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {availability === 'ready' && (!card.isDefault || state.data.defaultCount !== 1) ? <AppButton title={`Make ${cardLabel} default`} variant="secondary" disabled={locked} onPress={() => mutate({ type: 'default', id: card.id })} /> : null}
+            <AppButton title={`Remove ${cardLabel}`} variant="ghost" disabled={locked} onPress={() => setConfirmation({ type: 'remove', id: card.id, label: cardLabel })} />
           </View>
-        ) : (
-          <Card style={styles.emptyCard}>
-            <Card.Content style={styles.emptyContent}>
-              <Ionicons name="card-outline" size={64} color={colors.gray} />
-              <Title style={styles.emptyTitle}>No Cards Added</Title>
-              <Paragraph style={styles.emptySubtitle}>
-                Add a payment card to start making transactions
-              </Paragraph>
-            </Card.Content>
-          </Card>
-        )}
-
-      </ScrollView>
-
-      {/* Add Card Modal */}
-      <Modal
-        visible={showAddCardModal}
-        onDismiss={() => setShowAddCardModal(false)}
-        contentContainerStyle={styles.modalContainer}
-      >
-        <Card style={styles.modalCard}>
-          <Card.Content>
-            <Title style={styles.modalTitle}>Add New Card</Title>
-            
-            <TextInput
-              label="Card Number"
-              value={newCard.cardNumber}
-              onChangeText={handleCardNumberChange}
-              mode="outlined"
-              keyboardType="numeric"
-              placeholder="1234 5678 9012 3456"
-              style={styles.modalInput}
-              maxLength={23} // Maximum formatted length (19 digits + 4 spaces)
-              theme={{
-                colors: {
-                  primary: colors.primary,
-                },
-              }}
-            />
-
-            <View style={styles.expiryRow}>
-              <TextInput
-                label="Month"
-                value={newCard.expMonth}
-                onChangeText={handleExpiryMonthChange}
-                mode="outlined"
-                keyboardType="numeric"
-                placeholder="MM"
-                style={[styles.modalInput, styles.halfInput]}
-                maxLength={2}
-                theme={{
-                  colors: {
-                    primary: colors.primary,
-                  },
-                }}
-              />
-              <TextInput
-                label="Year"
-                value={newCard.expYear}
-                onChangeText={handleExpiryYearChange}
-                mode="outlined"
-                keyboardType="numeric"
-                placeholder="YYYY"
-                style={[styles.modalInput, styles.halfInput]}
-                maxLength={4}
-                theme={{
-                  colors: {
-                    primary: colors.primary,
-                  },
-                }}
-              />
-            </View>
-
-            <TextInput
-              label="CVC"
-              value={newCard.cvc}
-              onChangeText={handleCVCChange}
-              mode="outlined"
-              keyboardType="numeric"
-              placeholder="123"
-              style={styles.modalInput}
-              maxLength={4}
-              theme={{
-                colors: {
-                  primary: colors.primary,
-                },
-              }}
-            />
-
-            <TextInput
-              label="Cardholder Name"
-              value={newCard.cardholderName}
-              onChangeText={(value) => setNewCard({ ...newCard, cardholderName: value })}
-              mode="outlined"
-              placeholder="John Doe"
-              style={styles.modalInput}
-              theme={{
-                colors: {
-                  primary: colors.primary,
-                },
-              }}
-            />
-
-            <View style={styles.modalActions}>
-              <Button
-                mode="outlined"
-                onPress={() => setShowAddCardModal(false)}
-                style={styles.modalButton}
-                theme={{
-                  colors: {
-                    primary: colors.primary,
-                  },
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                mode="contained"
-                onPress={handleAddCard}
-                loading={isAddingCard}
-                disabled={isAddingCard}
-                style={styles.modalButton}
-                theme={{
-                  colors: {
-                    primary: colors.primary,
-                  },
-                }}
-              >
-                Add Card
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
-      </Modal>
-
-      {/* Custom Remove Confirmation Dialog */}
-      {showRemoveConfirm && cardToRemove && (
-        <View style={styles.overlay}>
-          <View style={styles.confirmationDialog}>
-            <Text style={styles.dialogTitle}>Remove Card</Text>
-            <Text style={styles.dialogMessage}>
-              Are you sure you want to remove the {cardToRemove.info.brand} card ending in {cardToRemove.info.last4}?
-            </Text>
-            <View style={styles.dialogButtons}>
-              <Button
-                mode="outlined"
-                onPress={cancelRemove}
-                style={styles.cancelButton}
-                textColor={colors.textSecondary}
-              >
-                Cancel
-              </Button>
-              <Button
-                mode="contained"
-                onPress={confirmRemoveCard}
-                style={styles.removeDialogButton}
-                buttonColor={colors.error}
-                textColor={colors.white}
-              >
-                Remove
-              </Button>
-            </View>
-          </View>
-        </View>
-      )}
-    </View>
-  );
+        </AppCard>;
+      })}</View> : <EmptyState title="No test cards yet" message="Add a predefined test card when you want to approve a simulation. You can create requests without one." icon="card-outline" />}
+    </>}
+    {catalog.loading ? <LoadingSkeleton label="Loading the test-card catalog" lines={2} /> : catalog.error ? <ErrorState title="Test-card catalog unavailable" message="The demo choices could not be loaded. Try again before adding a card." retryLabel="Retry test-card catalog" onRetry={() => catalog.refresh()} /> : adding ? <AppCard style={{ gap: 16 }}>
+      <AppText variant="h3" accessibilityRole="header">Choose a test card</AppText>
+      <AppText color="textSecondary">The server supplies a valid demo expiry. These instruments cannot make real payments.</AppText>
+      {available.length ? <>
+        {available.map(instrument => <MaskedCard key={instrument.id} card={instrument} selected={instrument.id === selectedId} onPress={locked ? undefined : () => setSelectedId(instrument.id)} />)}
+        <AppButton title="Add selected test card" disabled={locked || !available.some(item => item.id === selectedId)} onPress={() => {
+          const instrument = available.find(item => item.id === selectedId);
+          if (instrument) setConfirmation({ type: 'add', testCardId: instrument.id, label: `${instrument.brand} ending ${instrument.last4}` });
+        }} />
+      </> : <AppText color="textSecondary">All available test cards are already linked.</AppText>}
+      <AppButton title="Close card choices" variant="ghost" disabled={busy} onPress={() => setAdding(false)} />
+    </AppCard> : <AppButton title="Add a test card" icon="add-outline" disabled={locked || !catalog.data} onPress={showAdd} />}
+    <ConfirmBottomSheet visible={Boolean(confirmation)} title={confirmation?.type === 'add' ? 'Add this test card?' : 'Remove this test card?'}
+      message={confirmation?.type === 'add' ? `${confirmation.label} is a synthetic instrument for NamPay demonstrations only.` : `${confirmation?.label || 'This card'} will be removed. If it is the default, the server will choose one remaining card. Your past receipts remain available.`}
+      confirmLabel={confirmation?.type === 'add' ? 'Add test card' : 'Remove test card'} destructive={confirmation?.type === 'remove'} loading={busy}
+      onCancel={() => setConfirmation(null)} onConfirm={() => confirmation && mutate(confirmation)} />
+  </AppScreen>;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: typography.body1.fontSize,
-    color: colors.textSecondary,
-  },
-  header: {
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: typography.h2.fontSize,
-    fontWeight: typography.h2.fontWeight,
-    color: colors.white,
-    marginTop: spacing.sm,
-  },
-  headerSubtitle: {
-    fontSize: typography.body1.fontSize,
-    color: colors.white,
-    opacity: 0.9,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  addCardButton: {
-    marginBottom: spacing.lg,
-  },
-  cardsList: {
-    marginBottom: spacing.lg,
-  },
-  cardItem: {
-    elevation: 4,
-    borderRadius: 12,
-    marginBottom: spacing.md,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  cardInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  cardIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  cardDetails: {
-    flex: 1,
-  },
-  cardBrand: {
-    fontSize: typography.body1.fontSize,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  cardNumber: {
-    fontSize: typography.body2.fontSize,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  cardBank: {
-    fontSize: typography.caption.fontSize,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  defaultBadge: {
-    backgroundColor: colors.success,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 12,
-  },
-  defaultText: {
-    fontSize: typography.caption.fontSize,
-    fontWeight: '600',
-    color: colors.white,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  actionButton: {
-    marginLeft: spacing.sm,
-  },
-  removeButton: {
-    borderColor: colors.error,
-  },
-  emptyCard: {
-    elevation: 2,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-  },
-  emptyContent: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  emptyTitle: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  emptySubtitle: {
-    fontSize: typography.body2.fontSize,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  testCard: {
-    elevation: 2,
-    borderRadius: 12,
-    backgroundColor: colors.info + '10',
-  },
-  testTitle: {
-    fontSize: typography.h4.fontSize,
-    fontWeight: typography.h4.fontWeight,
-    color: colors.info,
-    marginBottom: spacing.sm,
-  },
-  testText: {
-    fontSize: typography.body2.fontSize,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  testCardsList: {
-    marginBottom: spacing.md,
-  },
-  testCardItem: {
-    fontSize: typography.body2.fontSize,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  testNote: {
-    fontSize: typography.caption.fontSize,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-  },
-  modalContainer: {
-    padding: spacing.lg,
-  },
-  modalCard: {
-    elevation: 8,
-    borderRadius: 16,
-  },
-  modalTitle: {
-    fontSize: typography.h3.fontSize,
-    fontWeight: typography.h3.fontWeight,
-    color: colors.text,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
-  },
-  modalInput: {
-    marginBottom: spacing.md,
-  },
-  expiryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  halfInput: {
-    flex: 0.48,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.lg,
-  },
-  modalButton: {
-    flex: 0.48,
-  },
-  // Custom Dialog Styles
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2000,
-  },
-  confirmationDialog: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: spacing.lg,
-    margin: spacing.lg,
-    minWidth: 280,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  dialogTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  dialogMessage: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  dialogButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  cancelButton: {
-    flex: 1,
-    borderColor: colors.border,
-  },
-  removeDialogButton: {
-    flex: 1,
-  },
-});
